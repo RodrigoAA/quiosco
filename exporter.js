@@ -1,5 +1,7 @@
-// Exporta la revista a PDF con Edge/Chrome headless controlado por CDP:
-// espera a que Paged.js termine y a que carguen las imágenes, y entonces genera.
+// Utilidades de navegador headless (Edge/Chrome vía CDP):
+// - exportPDF: espera a que Paged.js termine y genera el PDF de la revista
+// - fetchPageHTML: descarga una página como lo haría una persona, para sitios
+//   que rechazan peticiones de servidores (429/403, challenges de Vercel, etc.)
 
 import { spawn } from 'node:child_process';
 import fs from 'node:fs/promises';
@@ -20,9 +22,11 @@ async function findBrowser() {
   throw new Error('No se encontró Edge ni Chrome instalado');
 }
 
-export async function exportPDF(url, outFile) {
+// Arranca el navegador, abre una pestaña con sesión CDP y ejecuta fn({ send });
+// limpia proceso y perfil temporal pase lo que pase.
+async function withBrowserPage(fn) {
   const bin = await findBrowser();
-  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'quiosco-export-'));
+  const profile = await fs.mkdtemp(path.join(os.tmpdir(), 'quiosco-cdp-'));
   const proc = spawn(bin, [
     '--headless=new', '--disable-gpu', '--no-first-run', '--no-default-browser-check',
     '--remote-debugging-port=0', `--user-data-dir=${profile}`, 'about:blank'
@@ -76,6 +80,17 @@ export async function exportPDF(url, outFile) {
       ws.send(JSON.stringify({ id, method, params }));
     });
 
+    const result = await fn({ send });
+    ws.close();
+    return result;
+  } finally {
+    proc.kill();
+    fs.rm(profile, { recursive: true, force: true }).catch(() => { });
+  }
+}
+
+export function exportPDF(url, outFile) {
+  return withBrowserPage(async ({ send }) => {
     await send('Page.navigate', { url });
 
     // Esperar a que Paged.js acabe y a que carguen las imágenes
@@ -119,9 +134,36 @@ export async function exportPDF(url, outFile) {
     }
     await send('IO.close', { handle: pdf.stream });
     await fs.writeFile(outFile, Buffer.concat(chunks));
-    ws.close();
-  } finally {
-    proc.kill();
-    fs.rm(profile, { recursive: true, force: true }).catch(() => { });
-  }
+  });
+}
+
+// Páginas de espera de los sistemas anti-bots más comunes
+const CHALLENGE_TITLES = /security checkpoint|just a moment|attention required|un momento|verifying you|are you a robot/i;
+
+export function fetchPageHTML(url) {
+  return withBrowserPage(async ({ send }) => {
+    const evalJs = async expression =>
+      (await send('Runtime.evaluate', { expression, returnByValue: true })).result.value;
+
+    await send('Page.navigate', { url });
+
+    // Espera a que cargue Y a que el challenge (si lo hay) se resuelva solo
+    const deadline = Date.now() + 40000;
+    for (;;) {
+      const st = JSON.parse(await evalJs(`JSON.stringify({
+        ready: document.readyState,
+        title: document.title,
+        len: document.body ? document.body.innerText.length : 0
+      })`));
+      if (st.ready === 'complete' && !CHALLENGE_TITLES.test(st.title) && st.len > 0) break;
+      if (Date.now() > deadline) break; // devolvemos lo que haya llegado
+      await new Promise(r => setTimeout(r, 500));
+    }
+    await new Promise(r => setTimeout(r, 500));
+
+    return {
+      html: await evalJs('document.documentElement.outerHTML'),
+      url: await evalJs('location.href')
+    };
+  });
 }

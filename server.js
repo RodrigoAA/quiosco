@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { Readability } from '@mozilla/readability';
-import { exportPDF } from './exporter.js';
+import { exportPDF, fetchPageHTML } from './exporter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, 'data');
@@ -175,7 +175,8 @@ async function extractAny(url) {
   const statusId = parseXStatus(url);
   if (statusId) return extractXThread(statusId, url);
 
-  let r;
+  let r = null;
+  let fetchError = null;
   try {
     r = await fetch(url, {
       redirect: 'follow',
@@ -187,12 +188,32 @@ async function extractAny(url) {
       }
     });
   } catch (e) {
-    const msg = e.name === 'TimeoutError' ? 'El sitio tardó demasiado en responder' : e.message;
-    throw Object.assign(new Error(msg), { status: 502 });
+    if (e.name === 'TimeoutError') {
+      throw Object.assign(new Error('El sitio tardó demasiado en responder'), { status: 502 });
+    }
+    fetchError = e;
   }
-  if (!r.ok) throw Object.assign(new Error(`El sitio respondió con error ${r.status}`), { status: 502 });
-  const article = extractArticle(await r.text(), r.url || url);
-  if (!article) throw Object.assign(new Error('No se pudo extraer el artículo de esa página'), { status: 422 });
+
+  let article = null;
+  if (r && r.ok) {
+    article = extractArticle(await r.text(), r.url || url);
+  }
+
+  // Sitios que rechazan servidores (429/403, challenges de Vercel/Cloudflare)
+  // o que solo pintan el contenido con JavaScript: reintento con un navegador
+  // headless de verdad, el mismo que usamos para exportar el PDF.
+  if (!article || article.words < 40) {
+    try {
+      const via = await fetchPageHTML(url);
+      article = extractArticle(via.html, via.url || url) || article;
+    } catch { /* nos quedamos con el diagnóstico del fetch directo */ }
+  }
+
+  if (!article) {
+    if (r && !r.ok) throw Object.assign(new Error(`El sitio respondió con error ${r.status}`), { status: 502 });
+    if (fetchError) throw Object.assign(new Error(fetchError.message), { status: 502 });
+    throw Object.assign(new Error('No se pudo extraer el artículo de esa página'), { status: 422 });
+  }
   return article;
 }
 
