@@ -243,16 +243,22 @@ async function loadNews() {
       list.innerHTML = '<li class="tip" style="margin: 6px 0">Nada nuevo por aquí. Sigue algún feed arriba.</li>';
       return;
     }
-    list.innerHTML = d.items.map(it => `<li class="news-item" data-url="${esc(it.link)}">
+    list.innerHTML = d.items.map(it => {
+      let origin = '';
+      try { origin = new URL(it.link).origin; } catch { /* enlace raro */ }
+      return `<li class="news-item" data-url="${esc(it.link)}">
       <div class="news-info">
-        <span class="news-src">${esc(it.source)}${it.date ? ' · ' + new Date(it.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : ''}</span>
-        <span class="news-title">${esc(it.title)}</span>
+        <span class="news-src">${origin
+          ? `<a href="${esc(origin)}" target="_blank" rel="noopener" title="Abrir la publicación">${esc(it.source)}</a>`
+          : esc(it.source)}${it.date ? ' · ' + new Date(it.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : ''}</span>
+        <span class="news-title"><a href="${esc(it.link)}" target="_blank" rel="noopener" title="Leer en la web">${esc(it.title)}</a></span>
       </div>
       ${it.added
         ? '<span class="news-added" title="Ya está en la revista">✓</span>'
         : '<button class="btn news-add" type="button" title="Añadir al número actual">＋</button>'}
       <button class="news-dismiss" type="button" title="Descartar (no volverá a aparecer)">×</button>
-    </li>`).join('');
+    </li>`;
+    }).join('');
   } catch {
     list.innerHTML = '';
   }
