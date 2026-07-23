@@ -57,7 +57,7 @@ function backcoverHTML(s, arts, backstyle) {
 
 function tocHTML(arts) {
   return `<section class="toc">
-    <h2>Sumario</h2>
+    <h2>Índice</h2>
     <ol>
       ${arts.map((a, i) => `<li class="toc-entry">
         <div class="toc-line">

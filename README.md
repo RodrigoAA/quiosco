@@ -1,7 +1,7 @@
 # Quiosco — maquetador de revistas A4
 
 Convierte artículos de **Substack, blogs y X** en una **revista A4 imprimible**:
-portada, sumario con números de página, artículos en columnas con capitular,
+portada, índice con números de página, artículos en columnas con capitular,
 contraportada con colofón y folio en el pie. Editas en el navegador y sacas un
 PDF listo para la imprenta.
 
