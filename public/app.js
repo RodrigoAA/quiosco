@@ -78,14 +78,13 @@ function articleItem(a) {
   const included = a.included !== false;
   return `<li class="art ${included ? '' : 'off'}" data-id="${esc(a.id)}">
     <div class="art-row">
+      <span class="art-grip" title="Arrastra para reordenar"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="9" cy="5" r="1"/><circle cx="9" cy="12" r="1"/><circle cx="9" cy="19" r="1"/><circle cx="15" cy="5" r="1"/><circle cx="15" cy="12" r="1"/><circle cx="15" cy="19" r="1"/></svg></span>
       <input type="checkbox" data-action="include" title="Incluir en la revista" ${included ? 'checked' : ''}>
       <div class="art-info">
         <span class="art-title">${esc(a.title)}</span>
         <span class="art-meta">${esc([a.siteName, a.minutes ? a.minutes + ' min' : ''].filter(Boolean).join(' · '))}</span>
       </div>
       <div class="art-btns">
-        <button data-action="up" title="Subir">↑</button>
-        <button data-action="down" title="Bajar">↓</button>
         <button data-action="edit" title="Editar">✎</button>
         <button data-action="del" class="danger" title="Eliminar">✕</button>
       </div>
@@ -138,13 +137,7 @@ function bindArticleList() {
     if (idx < 0) return;
     const action = btn.dataset.action;
 
-    if (action === 'up' || action === 'down') {
-      const j = action === 'up' ? idx - 1 : idx + 1;
-      if (j < 0 || j >= mag.articles.length) return;
-      [mag.articles[idx], mag.articles[j]] = [mag.articles[j], mag.articles[idx]];
-      renderArticles();
-      scheduleSave();
-    } else if (action === 'edit') {
+    if (action === 'edit') {
       li.querySelector('.art-edit').classList.toggle('hidden');
     } else if (action === 'del') {
       if (!confirm(`¿Eliminar «${mag.articles[idx].title}» de la revista?`)) return;
@@ -170,6 +163,42 @@ function bindArticleList() {
     if (idx < 0) return;
     mag.articles[idx][field] = ev.target.value;
     if (field === 'title') li.querySelector('.art-title').textContent = ev.target.value;
+    scheduleSave();
+  });
+
+  // Reordenar arrastrando desde el asa (⠿). El <li> solo es arrastrable
+  // mientras el gesto empiece en el asa, para no romper inputs y selección.
+  let dragging = null;
+  list.addEventListener('mousedown', ev => {
+    const grip = ev.target.closest('.art-grip');
+    if (grip) grip.closest('li.art').draggable = true;
+  });
+  list.addEventListener('dragstart', ev => {
+    const li = ev.target.closest('li.art');
+    if (!li || !li.draggable) { ev.preventDefault(); return; }
+    dragging = li;
+    li.classList.add('dragging');
+    ev.dataTransfer.effectAllowed = 'move';
+    ev.dataTransfer.setData('text/plain', li.dataset.id);
+  });
+  list.addEventListener('dragover', ev => {
+    if (!dragging) return;
+    ev.preventDefault();
+    ev.dataTransfer.dropEffect = 'move';
+    const li = ev.target.closest('li.art');
+    if (!li || li === dragging) return;
+    const r = li.getBoundingClientRect();
+    const before = ev.clientY < r.top + r.height / 2;
+    list.insertBefore(dragging, before ? li : li.nextSibling);
+  });
+  list.addEventListener('drop', ev => ev.preventDefault());
+  list.addEventListener('dragend', () => {
+    if (!dragging) return;
+    dragging.classList.remove('dragging');
+    dragging.draggable = false;
+    dragging = null;
+    const order = [...list.querySelectorAll('li.art')].map(li => li.dataset.id);
+    mag.articles.sort((a, b) => order.indexOf(a.id) - order.indexOf(b.id));
     scheduleSave();
   });
 }
@@ -767,6 +796,25 @@ function extractPalette(img, n = 5) {
   return picked.map(x => `#${hex(x.r)}${hex(x.g)}${hex(x.b)}`);
 }
 
+let paletteReq = 0;
+async function renderPalette() {
+  const req = ++paletteReq;
+  const coverUrl = mag.settings.coverImage || mag.articles.map(a => a.leadImage).find(Boolean);
+  if (!coverUrl) {
+    $('#swatches').innerHTML = '';
+    return;
+  }
+  try {
+    const img = await loadCoverBitmap(coverUrl);
+    if (req !== paletteReq) return; // la portada volvió a cambiar mientras cargaba
+    const palette = extractPalette(img);
+    $('#swatches').innerHTML = palette.map(h =>
+      `<button class="swatch" type="button" style="background:${h}" title="${h}" data-hex="${h}"></button>`).join('');
+  } catch {
+    if (req === paletteReq) $('#swatches').innerHTML = ''; // imagen inaccesible: queda solo el cuentagotas
+  }
+}
+
 async function initPalette() {
   const dropBtn = $('#eyedropper');
   if ('EyeDropper' in window) {
@@ -780,19 +828,19 @@ async function initPalette() {
     dropBtn.classList.add('hidden');
   }
 
-  const coverUrl = mag.settings.coverImage || mag.articles.map(a => a.leadImage).find(Boolean);
-  if (coverUrl) {
-    try {
-      const img = await loadCoverBitmap(coverUrl);
-      const palette = extractPalette(img);
-      $('#swatches').innerHTML = palette.map(h =>
-        `<button class="swatch" type="button" style="background:${h}" title="${h}" data-hex="${h}"></button>`).join('');
-      $('#swatches').addEventListener('click', ev => {
-        const b = ev.target.closest('.swatch');
-        if (b) setAccent(b.dataset.hex);
-      });
-    } catch { /* imagen inaccesible: queda solo el cuentagotas */ }
-  }
+  $('#swatches').addEventListener('click', ev => {
+    const b = ev.target.closest('.swatch');
+    if (b) setAccent(b.dataset.hex);
+  });
+
+  // Al cambiar la imagen de portada, la paleta se recalcula sola
+  let coverTimer = null;
+  $('#s-coverImage').addEventListener('input', () => {
+    clearTimeout(coverTimer);
+    coverTimer = setTimeout(renderPalette, 600);
+  });
+
+  await renderPalette();
   $('#paletteRow').classList.remove('hidden');
 }
 

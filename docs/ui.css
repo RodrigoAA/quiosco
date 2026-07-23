@@ -254,6 +254,18 @@ input[type="color"] {
 }
 .art:hover { background: var(--panel); border-color: var(--line-strong); }
 .art.off { opacity: 0.45; }
+.art.dragging { opacity: 0.4; border-style: dashed; }
+.art-grip {
+  display: inline-flex;
+  align-items: center;
+  color: var(--muted);
+  cursor: grab;
+  margin: 0 -4px 0 -3px;
+  opacity: 0;
+  transition: opacity 0.12s;
+}
+.art:hover .art-grip { opacity: 1; }
+.art-grip:active { cursor: grabbing; }
 .art-row {
   display: flex;
   align-items: center;
