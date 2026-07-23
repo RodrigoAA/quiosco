@@ -167,6 +167,13 @@ input[type="color"] {
 .swatch:hover { box-shadow: 0 0 0 2px var(--accent); }
 .palette-row .btn { padding: 3px 8px; margin-left: auto; }
 
+#imgEditBtn.active {
+  background: #c0392b;
+  border-color: #c0392b;
+  color: #ffffff;
+}
+#imgEditHint { font-size: 11px; color: #c0392b; }
+
 .error { color: #c0392b; font-size: 12px; margin: 8px 0 0; }
 .hidden { display: none; }
 .tip { font-size: 11px; color: var(--muted); line-height: 1.45; margin: 10px 0 0; }

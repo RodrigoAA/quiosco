@@ -57,6 +57,26 @@
       font-size: 15px;
     }
   }
+  /* Embebido en el editor: solo el contador (los botones ya están arriba) */
+  body.embedded #toolbar {
+    padding: 5px 10px;
+    font-size: 11px;
+    gap: 0;
+    opacity: 0.92;
+  }
+  body.embedded #tb-print,
+  body.embedded #tb-hint { display: none; }
+
+  /* Modo «quitar imágenes» (activado desde el editor) */
+  body.img-edit .pagedjs_page .article img {
+    cursor: not-allowed;
+  }
+  body.img-edit .pagedjs_page .article img:hover {
+    outline: 4px solid #c0392b;
+    outline-offset: -4px;
+    opacity: 0.75;
+  }
+  body.img-edit ::selection { background: rgba(192, 57, 43, 0.35); }
   @media print {
     #toolbar, #empty { display: none !important; }
     body { margin: 0; }

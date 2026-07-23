@@ -154,6 +154,50 @@ img { max-width: 100%; }
   background: var(--accent);
   margin-bottom: 4mm;
 }
+/* Modo «área»: contraportada a página completa (a sangre, como la portada),
+   texto en blanco dentro y el número como marca de agua gigante */
+@page contraportada-full {
+  margin: 0;
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+.bc-ghost { display: none; }
+
+.backcover.area {
+  page: contraportada-full;
+  height: 296mm;
+  padding: 16mm 15mm 14mm;
+  background: var(--accent);
+  color: #ffffff;
+  box-sizing: border-box;
+  position: relative;
+}
+/* Faldón: cubre el milímetro de holgura para que el color llegue al borde */
+.backcover.area::after {
+  content: '';
+  position: absolute;
+  left: 0;
+  right: 0;
+  bottom: -2.5mm;
+  height: 5mm;
+  background: var(--accent);
+}
+.backcover.area .bc-rule { background: #ffffff; }
+.backcover.area .bc-issue { color: rgba(255, 255, 255, 0.88); }
+.backcover.area .bc-colophon { color: rgba(255, 255, 255, 0.8); }
+.backcover.area .bc-ghost {
+  display: block;
+  position: absolute;
+  top: 12mm;
+  right: 13mm;
+  margin: 0;
+  font-family: var(--display);
+  font-size: 110pt;
+  font-weight: 800;
+  line-height: 1;
+  color: rgba(255, 255, 255, 0.18);
+}
 .bc-name {
   font-family: var(--display);
   font-size: 20pt;

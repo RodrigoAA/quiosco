@@ -77,12 +77,20 @@
             <option value="moderna">Moderna — Inter (todo sans)</option>
           </select>
         </label>
-        <label>Acabado
-          <select id="s-finish">
-            <option value="caballete">Grapada — contraportada y múltiplo de 4</option>
-            <option value="normal">Hojas sueltas / espiral — sin contraportada</option>
-          </select>
-        </label>
+        <div class="row2">
+          <label>Acabado
+            <select id="s-finish">
+              <option value="caballete">Grapada — contraportada y múltiplo de 4</option>
+              <option value="normal">Hojas sueltas / espiral — sin contraportada</option>
+            </select>
+          </label>
+          <label>Contraportada
+            <select id="s-backstyle">
+              <option value="raya">Raya de color</option>
+              <option value="area">Área de color</option>
+            </select>
+          </label>
+        </div>
         <label>Imagen de portada (URL)
           <input id="s-coverImage" type="text" placeholder="vacío = primera imagen disponible">
         </label>
@@ -122,6 +130,9 @@
           </select>
         </label>
         <button id="refresh" class="btn" type="button">Actualizar</button>
+        <button id="imgEditBtn" class="btn" type="button"
+          title="Modo edición: pulsa una imagen para quitarla, o selecciona texto para eliminar esos párrafos">✂ Recortar</button>
+        <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto para quitarlos · el modo sigue activo hasta que lo apagues</span>
       </div>
       <iframe id="preview" src="print.html" title="Previsualización de la revista"></iframe>
     </section>

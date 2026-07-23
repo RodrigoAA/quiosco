@@ -8,7 +8,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'finish', 'coverImage'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'finish', 'backstyle', 'coverImage'];
 
 function status(msg, isError = false) {
   const el = $('#status');
@@ -58,6 +58,7 @@ function bindSettings() {
   if (mag.settings.font === 'sans') mag.settings.font = 'moderna';
   if (!mag.settings.columns) mag.settings.columns = '2';
   if (!mag.settings.finish) mag.settings.finish = 'caballete';
+  if (!mag.settings.backstyle) mag.settings.backstyle = 'raya';
 
   for (const f of SETTING_FIELDS) {
     const input = $('#s-' + f);
@@ -205,6 +206,85 @@ function bindPreviewTools() {
   zoom.addEventListener('change', applyZoom);
   applyZoom();
   $('#refresh').addEventListener('click', reloadPreview);
+}
+
+/* ---------- Quitar imágenes con clic (en la previsualización) ---------- */
+
+let imgEditOn = false;
+
+function sendImgEditMode() {
+  try {
+    $('#preview').contentWindow.postMessage({ quiosco: 'img-edit', on: imgEditOn }, '*');
+  } catch { /* iframe aún cargando */ }
+}
+
+function initImageRemoval() {
+  const btn = $('#imgEditBtn');
+  btn.addEventListener('click', () => {
+    imgEditOn = !imgEditOn;
+    btn.classList.toggle('active', imgEditOn);
+    $('#imgEditHint').classList.toggle('hidden', !imgEditOn);
+    sendImgEditMode();
+  });
+
+  // El modo sobrevive a las recargas del iframe (cada guardado lo recarga)
+  $('#preview').addEventListener('load', () => setTimeout(sendImgEditMode, 500));
+
+  window.addEventListener('message', ev => {
+    const d = ev.data;
+    if (!d || (d.quiosco !== 'remove-image' && d.quiosco !== 'remove-text')) return;
+    const included = mag.articles.filter(a => a.included !== false);
+    const article = included[d.art];
+    if (!article) return;
+
+    if (d.quiosco === 'remove-image') {
+      if (d.isLead) {
+        article.leadImage = '';
+      } else {
+        const doc = new DOMParser().parseFromString(article.content, 'text/html');
+        const img = [...doc.images].find(i => i.getAttribute('src') === d.src);
+        if (img) {
+          // En galerías (un figure con varias imágenes) se quita solo la pulsada
+          const fig = img.closest('figure');
+          if (fig && fig.querySelectorAll('img').length === 1) fig.remove();
+          else (img.closest('picture') || img).remove();
+          article.content = doc.body.innerHTML;
+        } else if (article.leadImage === d.src) {
+          article.leadImage = '';
+        } else {
+          status('No se encontró esa imagen en el artículo', true);
+          return;
+        }
+      }
+      status(`Imagen quitada de «${article.title}» ✓`);
+      scheduleSave();
+      return;
+    }
+
+    // remove-text: quita los bloques cuyo texto coincida (el más pequeño que encaje)
+    if (!Array.isArray(d.texts) || !d.texts.length) return;
+    const doc = new DOMParser().parseFromString(article.content, 'text/html');
+    const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
+    let removed = 0;
+    for (const t of d.texts) {
+      const target = norm(t);
+      if (target.length < 3) continue;
+      const matches = [...doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, figcaption')]
+        .filter(el => norm(el.textContent).includes(target));
+      if (!matches.length) continue;
+      matches.sort((a, b) => a.textContent.length - b.textContent.length);
+      matches[0].remove();
+      removed++;
+    }
+    doc.body.querySelectorAll('ul, ol').forEach(l => { if (!l.querySelector('li')) l.remove(); });
+    if (removed) {
+      article.content = doc.body.innerHTML;
+      status(`${removed} bloque(s) de texto quitados de «${article.title}» ✓`);
+      scheduleSave();
+    } else {
+      status('No se encontró ese texto en el artículo', true);
+    }
+  });
 }
 
 /* ---------- Paleta de la portada ---------- */
@@ -388,6 +468,7 @@ async function init() {
   bindPreviewTools();
   bindExport();
   initBookmarklet();
+  initImageRemoval();
   await initIssues();
   initPalette();
   status('Listo');

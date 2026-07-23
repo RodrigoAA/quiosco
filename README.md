@@ -18,6 +18,13 @@ columnas con capitular y folio en el pie.
 - **Bookmarklet «➕ A Quiosco»**: arrastra el botón del editor a la barra de
   marcadores; desde cualquier artículo lo añade al número actual vía
   `GET /add?url=…` (requiere el servidor arrancado).
+- **Contraportada**: «Raya de color» o «Área de color» (página completa del
+  color de acento con el número en marca de agua). Junto al color de acento,
+  muestras extraídas de la imagen de portada y cuentagotas nativo 🎨.
+- **✂ Recortar** (en la previsualización): pulsa una imagen para quitarla
+  (en galerías, solo la pulsada) o selecciona texto para eliminar esos
+  párrafos — ideal para la morralla final de los posts (enlaces, anuncios,
+  despedidas).
 
 ## Versión web (GitHub Pages)
 

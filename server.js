@@ -30,6 +30,7 @@ const DEFAULT_MAGAZINE = {
     font: 'clasica',
     columns: '2',
     finish: 'caballete',
+    backstyle: 'raya',
     coverImage: ''
   },
   articles: []

@@ -51,10 +51,11 @@ function coverHTML(s, arts) {
   </section>`;
 }
 
-function backcoverHTML(s, arts) {
+function backcoverHTML(s, arts, backstyle) {
   const date = s.date || new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
   const sources = [...new Set(arts.map(a => a.siteName || hostFromUrl(a.url)).filter(Boolean))];
-  return `<section class="backcover">
+  return `<section class="backcover${backstyle === 'area' ? ' area' : ''}">
+    <p class="bc-ghost">${esc(s.issue || '')}</p>
     <div class="bc-rule"></div>
     <p class="bc-name">${esc(s.title)}</p>
     <p class="bc-issue">${esc([s.issue, date].filter(Boolean).join(' · '))}</p>
@@ -86,7 +87,7 @@ function articleHTML(a, i, globalCols) {
   const lead = a.leadImage && !contentStartsWithImage(a.content)
     ? `<figure class="lead"><img src="${esc(a.leadImage)}" alt=""></figure>` : '';
   const cols = Math.min(4, Math.max(2, parseInt(a.cols, 10) || globalCols));
-  return `<section class="article cols-${cols}" id="art-${i}"${a.lang ? ` lang="${esc(a.lang)}"` : ''}>
+  return `<section class="article cols-${cols}" id="art-${i}" data-art="${i}"${a.lang ? ` lang="${esc(a.lang)}"` : ''}>
     <header class="article-header">
       <p class="kicker">${esc(a.siteName || hostFromUrl(a.url))}</p>
       <h1 class="article-title">${esc(a.title)}</h1>
@@ -123,10 +124,78 @@ async function pruneBrokenImages(root, timeoutMs = 15000) {
   return removed;
 }
 
+// Modo «quitar imágenes»: lo activa el editor (iframe padre) por postMessage
+function initImageEditMode() {
+  if (window.parent === window) return;
+  document.body.classList.add('embedded');
+
+  window.addEventListener('message', ev => {
+    if (ev.data && ev.data.quiosco === 'img-edit') {
+      document.body.classList.toggle('img-edit', !!ev.data.on);
+    }
+  });
+
+  document.getElementById('pages').addEventListener('click', ev => {
+    if (!document.body.classList.contains('img-edit')) return;
+    const img = ev.target.closest('img');
+    if (!img) return;
+    const article = img.closest('.article');
+    if (!article) return;
+    ev.preventDefault();
+    if (!confirm('¿Quitar esta imagen de la revista? (para recuperarla tendrías que volver a añadir el artículo)')) return;
+    const artIndex = parseInt(article.dataset.art ?? (article.id || '').replace('art-', ''), 10);
+    if (isNaN(artIndex)) return;
+    window.parent.postMessage({
+      quiosco: 'remove-image',
+      art: artIndex,
+      src: img.getAttribute('src') || '',
+      isLead: !!img.closest('figure.lead')
+    }, '*');
+  });
+
+  // Selección de texto → quitar los bloques (párrafos, títulos…) tocados
+  const BLOCK_SEL = '.pagedjs_page .article :is(p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, figcaption)';
+  document.addEventListener('mouseup', () => {
+    if (!document.body.classList.contains('img-edit')) return;
+    const sel = window.getSelection();
+    if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const range = sel.getRangeAt(0);
+    const startEl = range.startContainer.nodeType === 1
+      ? range.startContainer : range.startContainer.parentElement;
+    const startArticle = startEl && startEl.closest('.article');
+    if (!startArticle) return;
+    const artIndex = parseInt(startArticle.dataset.art ?? '', 10);
+    if (isNaN(artIndex)) return;
+
+    const candidates = [...document.querySelectorAll(BLOCK_SEL)].filter(el => {
+      try {
+        return range.intersectsNode(el)
+          && el.closest('.article')?.dataset.art === String(artIndex)
+          && el.textContent.trim().length > 0;
+      } catch { return false; }
+    });
+    const blocks = candidates.filter(el => !candidates.some(o => o !== el && o.contains(el)));
+    if (!blocks.length) return;
+
+    const preview = blocks[0].textContent.replace(/\s+/g, ' ').trim().slice(0, 60);
+    if (!confirm(`¿Quitar ${blocks.length} bloque(s) de texto que empiezan por «${preview}…»?`)) {
+      sel.removeAllRanges();
+      return;
+    }
+    window.parent.postMessage({
+      quiosco: 'remove-text',
+      art: artIndex,
+      texts: blocks.map(b => b.textContent.replace(/\s+/g, ' ').trim().slice(0, 400))
+    }, '*');
+    sel.removeAllRanges();
+  });
+}
+
 async function main() {
   const status = document.getElementById('tb-status');
   const printBtn = document.getElementById('tb-print');
   printBtn.addEventListener('click', () => window.print());
+  initImageEditMode();
 
   const mag = loadMag();
   const s = mag.settings;
@@ -143,6 +212,7 @@ async function main() {
   const globalCols = Math.min(4, Math.max(2, parseInt(qp.get('cols') || s.columns, 10) || 2));
   // Acabado «caballete»: contraportada al final y total de páginas múltiplo de 4
   const saddle = (qp.get('finish') || s.finish || 'caballete') === 'caballete';
+  const backstyle = qp.get('back') || s.backstyle || 'raya';
 
   if (!arts.length) {
     document.getElementById('pages').innerHTML =
@@ -155,7 +225,7 @@ async function main() {
   const content = document.createElement('div');
   content.innerHTML = coverHTML(s, arts) + tocHTML(arts)
     + arts.map((a, i) => articleHTML(a, i, globalCols)).join('')
-    + (saddle ? backcoverHTML(s, arts) : '');
+    + (saddle ? backcoverHTML(s, arts, backstyle) : '');
 
   const FONT_FAMILIES = {
     editorial: ['700 1em "Playfair Display"', '800 1em "Playfair Display"', '1em Lora', 'italic 1em Lora', '700 1em Lora'],
@@ -200,8 +270,8 @@ async function main() {
         pagesEl.innerHTML = '';
         const content2 = document.createElement('div');
         content2.innerHTML = cleanedHTML.replace(
-          '<section class="backcover"',
-          '<section class="filler-page"></section>'.repeat(needed) + '<section class="backcover"'
+          '<section class="backcover',
+          '<section class="filler-page"></section>'.repeat(needed) + '<section class="backcover'
         );
         result = await new Previewer().preview(content2, ['magazine.css'], pagesEl);
       }
