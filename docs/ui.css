@@ -148,7 +148,12 @@ input[type="color"] {
 }
 .btn.primary:hover { filter: brightness(1.08); }
 .btn:disabled { opacity: 0.55; cursor: default; }
-.btn.icon { padding: 6px 11px; }
+.btn.icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 6px 11px;
+}
 .ic {
   width: 17px;
   height: 17px;
