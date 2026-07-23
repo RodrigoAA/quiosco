@@ -352,18 +352,44 @@ function bindTopNav() {
   });
 }
 
+// Estados del recorte: ✂ entra (en rojo, salir cancelando) · al marcar
+// aparecen ✓ aplicar y ✕ cancelar · ↩ deshace lo ya aplicado
+function setTrimMode(on) {
+  imgEditOn = on;
+  $('#imgEditBtn').classList.toggle('active', on);
+  if (!on) {
+    $('#applyBtn').classList.add('hidden');
+    $('#trimCancelBtn').classList.add('hidden');
+  }
+  syncPreviewState();
+}
+
+function postToPreview(msg) {
+  try {
+    $('#preview').contentWindow.postMessage(msg, '*');
+  } catch { /* iframe cargando */ }
+}
+
 function initImageRemoval() {
-  const btn = $('#imgEditBtn');
-  btn.addEventListener('click', () => {
-    imgEditOn = !imgEditOn;
-    btn.classList.toggle('active', imgEditOn);
-    syncPreviewState();
+  $('#imgEditBtn').addEventListener('click', () => {
+    if (!imgEditOn) {
+      setTrimMode(true);
+      return;
+    }
+    postToPreview({ quiosco: 'clear-trims' });
+    setTrimMode(false);
+    status('');
+  });
+
+  $('#applyBtn').addEventListener('click', () => {
+    postToPreview({ quiosco: 'apply-now' });
+    setTrimMode(false);
   });
 
   $('#trimCancelBtn').addEventListener('click', () => {
-    try {
-      $('#preview').contentWindow.postMessage({ quiosco: 'clear-trims' }, '*');
-    } catch { /* iframe cargando */ }
+    postToPreview({ quiosco: 'clear-trims' });
+    setTrimMode(false);
+    status('');
   });
 
   // El estado sobrevive a las recargas del iframe (cada guardado lo recarga)
@@ -374,8 +400,9 @@ function initImageRemoval() {
     if (!d) return;
 
     if (d.quiosco === 'trim-count') {
-      status(d.n ? `${d.n} recorte(s) marcados — pulsa ✂ otra vez para aplicarlos` : '');
-      $('#trimCancelBtn').classList.toggle('hidden', !d.n);
+      status(d.n ? `${d.n} recorte(s) marcados` : (imgEditOn ? '' : $('#status').textContent));
+      $('#applyBtn').classList.toggle('hidden', !d.n || !imgEditOn);
+      $('#trimCancelBtn').classList.toggle('hidden', !d.n || !imgEditOn);
       return;
     }
     if (d.quiosco !== 'apply-trims' || !Array.isArray(d.items) || !d.items.length) return;

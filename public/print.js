@@ -215,13 +215,14 @@ function initImageEditMode() {
       pageGoTo(Number(ev.data.page) || 1);
     }
     if (ev.data && ev.data.quiosco === 'clear-trims') clearAllMarks();
+    if (ev.data && ev.data.quiosco === 'apply-now') applyMarks();
     if (ev.data && ev.data.quiosco === 'view') {
       const wasEditing = document.body.classList.contains('img-edit');
       document.body.classList.toggle('img-edit', !!ev.data.imgEdit);
       if (!wasEditing && ev.data.imgEdit) {
         try { window.getSelection().removeAllRanges(); } catch { /* sin selección */ }
       }
-      if (wasEditing && !ev.data.imgEdit) applyMarks();
+      if (wasEditing && !ev.data.imgEdit) clearAllMarks();
       document.body.classList.toggle('focusfull', !!ev.data.focus);
       // La toolbar mini no debe encogerse con el zoom de la previsualización
       const z = Number(ev.data.zoom);

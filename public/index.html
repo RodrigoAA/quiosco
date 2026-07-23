@@ -128,14 +128,17 @@
       <div class="preview-tools">
         <span class="pt-left">
           <button id="imgEditBtn" class="btn icon" type="button"
-            title="Recortar: pulsa una imagen para quitarla, o selecciona texto para eliminar esos párrafos">
+            title="Recortar: pulsa imágenes o selecciona texto para marcarlos; en rojo, vuelve a pulsar para salir cancelando">
             <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
           </button>
-          <button id="undoBtn" class="btn icon hidden" type="button" title="Deshacer el último recorte">
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          <button id="applyBtn" class="btn icon confirm hidden" type="button" title="Aplicar los recortes marcados">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
           </button>
           <button id="trimCancelBtn" class="btn icon hidden" type="button" title="Cancelar todos los recortes marcados">
             <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
+          </button>
+          <button id="undoBtn" class="btn icon hidden" type="button" title="Deshacer el último recorte aplicado">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
           </button>
         </span>
         <span class="pt-center">
