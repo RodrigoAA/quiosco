@@ -123,8 +123,11 @@ function initImageEditMode() {
   document.body.classList.add('embedded');
 
   window.addEventListener('message', ev => {
-    if (ev.data && ev.data.quiosco === 'img-edit') {
-      document.body.classList.toggle('img-edit', !!ev.data.on);
+    if (ev.data && ev.data.quiosco === 'view') {
+      document.body.classList.toggle('img-edit', !!ev.data.imgEdit);
+      // La toolbar mini no debe encogerse con el zoom de la previsualización
+      const z = Number(ev.data.zoom);
+      document.getElementById('toolbar').style.zoom = z > 0 ? String(1 / z) : '';
     }
   });
 

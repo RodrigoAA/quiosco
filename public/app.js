@@ -202,7 +202,10 @@ function bindAddForm() {
 function bindPreviewTools() {
   const frame = $('#preview');
   const zoom = $('#zoom');
-  const applyZoom = () => { frame.style.zoom = Number(zoom.value) / 100; };
+  const applyZoom = () => {
+    frame.style.zoom = Number(zoom.value) / 100;
+    syncPreviewState();
+  };
   zoom.addEventListener('change', applyZoom);
   applyZoom();
   $('#refresh').addEventListener('click', reloadPreview);
@@ -212,9 +215,13 @@ function bindPreviewTools() {
 
 let imgEditOn = false;
 
-function sendImgEditMode() {
+function syncPreviewState() {
   try {
-    $('#preview').contentWindow.postMessage({ quiosco: 'img-edit', on: imgEditOn }, '*');
+    $('#preview').contentWindow.postMessage({
+      quiosco: 'view',
+      imgEdit: imgEditOn,
+      zoom: Number($('#zoom').value) / 100
+    }, '*');
   } catch { /* iframe aún cargando */ }
 }
 
@@ -224,11 +231,11 @@ function initImageRemoval() {
     imgEditOn = !imgEditOn;
     btn.classList.toggle('active', imgEditOn);
     $('#imgEditHint').classList.toggle('hidden', !imgEditOn);
-    sendImgEditMode();
+    syncPreviewState();
   });
 
-  // El modo sobrevive a las recargas del iframe (cada guardado lo recarga)
-  $('#preview').addEventListener('load', () => setTimeout(sendImgEditMode, 500));
+  // El estado sobrevive a las recargas del iframe (cada guardado lo recarga)
+  $('#preview').addEventListener('load', () => setTimeout(syncPreviewState, 500));
 
   window.addEventListener('message', ev => {
     const d = ev.data;

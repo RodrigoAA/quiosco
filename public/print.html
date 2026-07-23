@@ -99,11 +99,10 @@
 <body>
   <div id="toolbar">
     <span id="tb-status">Maquetando…</span>
-    <button id="tb-download">Descargar PDF</button>
-    <button id="tb-print" disabled>Imprimir…</button>
-    <span id="tb-hint">«Descargar PDF» genera el archivo en el servidor (fiable, se abre el Explorador).
-    «Imprimir…» usa el diálogo del navegador — solo para impresora física, desde Edge/Chrome:
-    escala 100&nbsp;%, márgenes «Ninguno», «Gráficos de fondo» activado.</span>
+    <button id="tb-download"
+      title="Genera el PDF en el servidor (fiable) y abre el Explorador con el archivo">Descargar PDF</button>
+    <button id="tb-print" disabled
+      title="Diálogo del navegador, solo para impresora física: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">Imprimir…</button>
   </div>
   <div id="pages"></div>
   <script type="module" src="/print.js"></script>
