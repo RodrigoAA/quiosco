@@ -34,6 +34,51 @@
 @font-face { font-family: 'Inter'; font-weight: 700; font-style: normal; src: url('fonts/inter-700.woff2') format('woff2'); font-display: swap; }
 @font-face { font-family: 'Inter'; font-weight: 800; font-style: normal; src: url('fonts/inter-800.woff2') format('woff2'); font-display: swap; }
 
+/* Fraunces — titulares glossy contemporáneos */
+@font-face { font-family: 'Fraunces'; font-weight: 700; font-style: normal; src: url('fonts/fraunces-700.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Fraunces'; font-weight: 800; font-style: normal; src: url('fonts/fraunces-800.woff2') format('woff2'); font-display: swap; }
+
+/* Source Serif 4 — cuerpo sereno */
+@font-face { font-family: 'Source Serif 4'; font-weight: 400; font-style: normal; src: url('fonts/source-serif-4-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Source Serif 4'; font-weight: 400; font-style: italic; src: url('fonts/source-serif-4-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Source Serif 4'; font-weight: 700; font-style: normal; src: url('fonts/source-serif-4-700.woff2') format('woff2'); font-display: swap; }
+
+/* Spectral — titulares de libro */
+@font-face { font-family: 'Spectral'; font-weight: 700; font-style: normal; src: url('fonts/spectral-700.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Spectral'; font-weight: 800; font-style: normal; src: url('fonts/spectral-800.woff2') format('woff2'); font-display: swap; }
+
+/* Crimson Pro — cuerpo clásico de edición */
+@font-face { font-family: 'Crimson Pro'; font-weight: 400; font-style: normal; src: url('fonts/crimson-pro-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Crimson Pro'; font-weight: 400; font-style: italic; src: url('fonts/crimson-pro-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Crimson Pro'; font-weight: 700; font-style: normal; src: url('fonts/crimson-pro-700.woff2') format('woff2'); font-display: swap; }
+
+/* Space Grotesk — titulares técnicos */
+@font-face { font-family: 'Space Grotesk'; font-weight: 500; font-style: normal; src: url('fonts/space-grotesk-500.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Space Grotesk'; font-weight: 700; font-style: normal; src: url('fonts/space-grotesk-700.woff2') format('woff2'); font-display: swap; }
+
+/* Work Sans — cuerpo sans humanista */
+@font-face { font-family: 'Work Sans'; font-weight: 400; font-style: normal; src: url('fonts/work-sans-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Work Sans'; font-weight: 400; font-style: italic; src: url('fonts/work-sans-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Work Sans'; font-weight: 700; font-style: normal; src: url('fonts/work-sans-700.woff2') format('woff2'); font-display: swap; }
+
+/* Libre Franklin — titulares de diario */
+@font-face { font-family: 'Libre Franklin'; font-weight: 700; font-style: normal; src: url('fonts/libre-franklin-700.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Libre Franklin'; font-weight: 800; font-style: normal; src: url('fonts/libre-franklin-800.woff2') format('woff2'); font-display: swap; }
+
+/* Merriweather — cuerpo robusto de lectura */
+@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: normal; src: url('fonts/merriweather-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Merriweather'; font-weight: 400; font-style: italic; src: url('fonts/merriweather-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Merriweather'; font-weight: 700; font-style: normal; src: url('fonts/merriweather-700.woff2') format('woff2'); font-display: swap; }
+
+/* Oswald — titulares condensados de cartel */
+@font-face { font-family: 'Oswald'; font-weight: 600; font-style: normal; src: url('fonts/oswald-600.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Oswald'; font-weight: 700; font-style: normal; src: url('fonts/oswald-700.woff2') format('woff2'); font-display: swap; }
+
+/* Bitter — cuerpo slab con carácter */
+@font-face { font-family: 'Bitter'; font-weight: 400; font-style: normal; src: url('fonts/bitter-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Bitter'; font-weight: 400; font-style: italic; src: url('fonts/bitter-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Bitter'; font-weight: 700; font-style: normal; src: url('fonts/bitter-700.woff2') format('woff2'); font-display: swap; }
+
 /* ---------- Emparejamientos ----------
    --display = titulares · --serif = cuerpo · --sans = metadatos  */
 
@@ -60,3 +105,36 @@ html[data-font='moderna'] {
   --sans: 'Inter', 'Segoe UI', Arial, sans-serif;
 }
 html[data-font='moderna'] .article-body { font-size: 9.2pt; }
+
+html[data-font='glossy'] {
+  --serif: 'Source Serif 4', Georgia, serif;
+  --display: 'Fraunces', Georgia, serif;
+}
+
+html[data-font='libro'] {
+  --serif: 'Crimson Pro', Georgia, serif;
+  --display: 'Spectral', Georgia, serif;
+}
+/* Crimson tiene el ojo pequeño */
+html[data-font='libro'] .article-body { font-size: 10.6pt; }
+
+html[data-font='suiza'] {
+  --serif: 'Work Sans', 'Segoe UI', Arial, sans-serif;
+  --display: 'Space Grotesk', 'Segoe UI', Arial, sans-serif;
+  --sans: 'Work Sans', 'Segoe UI', Arial, sans-serif;
+}
+html[data-font='suiza'] .article-body { font-size: 9.2pt; }
+
+html[data-font='diario'] {
+  --serif: 'Merriweather', Georgia, serif;
+  --display: 'Libre Franklin', 'Segoe UI', Arial, sans-serif;
+}
+/* Merriweather es grande y oscura */
+html[data-font='diario'] .article-body { font-size: 9pt; line-height: 1.55; }
+
+html[data-font='cartel'] {
+  --serif: 'Bitter', Georgia, serif;
+  --display: 'Oswald', 'Segoe UI', Arial, sans-serif;
+}
+html[data-font='cartel'] .article-body { font-size: 9.3pt; }
+html[data-font='cartel'] .article-title { letter-spacing: 0.01em; }

@@ -418,7 +418,12 @@ async function main() {
     editorial: ['700 1em "Playfair Display"', '800 1em "Playfair Display"', '1em Lora', 'italic 1em Lora', '700 1em Lora'],
     elegante: ['700 1em "Cormorant Garamond"', '1em "EB Garamond"', 'italic 1em "EB Garamond"', '700 1em "EB Garamond"'],
     prensa: ['700 1em Archivo', '800 1em Archivo', '1em Newsreader', 'italic 1em Newsreader', '700 1em Newsreader'],
-    moderna: ['1em Inter', '700 1em Inter', '800 1em Inter']
+    moderna: ['1em Inter', '700 1em Inter', '800 1em Inter'],
+    glossy: ['700 1em Fraunces', '800 1em Fraunces', '1em "Source Serif 4"', 'italic 1em "Source Serif 4"', '700 1em "Source Serif 4"'],
+    libro: ['700 1em Spectral', '800 1em Spectral', '1em "Crimson Pro"', 'italic 1em "Crimson Pro"', '700 1em "Crimson Pro"'],
+    suiza: ['500 1em "Space Grotesk"', '700 1em "Space Grotesk"', '1em "Work Sans"', 'italic 1em "Work Sans"', '700 1em "Work Sans"'],
+    diario: ['700 1em "Libre Franklin"', '800 1em "Libre Franklin"', '1em Merriweather', 'italic 1em Merriweather', '700 1em Merriweather'],
+    cartel: ['600 1em Oswald', '700 1em Oswald', '1em Bitter', 'italic 1em Bitter', '700 1em Bitter']
   };
   if (FONT_FAMILIES[font]) {
     status.textContent = 'Cargando tipografías…';

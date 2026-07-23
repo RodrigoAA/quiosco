@@ -14,7 +14,17 @@ const FONTS = [
   { id: 'eb-garamond', variants: ['regular', 'italic', '700'] },
   { id: 'newsreader', variants: ['regular', 'italic', '700'] },
   { id: 'archivo', variants: ['700', '800'] },
-  { id: 'inter', variants: ['regular', '700', '800'] }
+  { id: 'inter', variants: ['regular', '700', '800'] },
+  { id: 'fraunces', variants: ['700', '800'] },
+  { id: 'source-serif-4', variants: ['regular', 'italic', '700'] },
+  { id: 'spectral', variants: ['700', '800'] },
+  { id: 'crimson-pro', variants: ['regular', 'italic', '700'] },
+  { id: 'space-grotesk', variants: ['500', '700'] },
+  { id: 'work-sans', variants: ['regular', 'italic', '700'] },
+  { id: 'libre-franklin', variants: ['700', '800'] },
+  { id: 'merriweather', variants: ['regular', 'italic', '700'] },
+  { id: 'oswald', variants: ['600', '700'] },
+  { id: 'bitter', variants: ['regular', 'italic', '700'] }
 ];
 
 await fs.mkdir(OUT, { recursive: true });
