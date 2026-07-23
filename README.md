@@ -17,7 +17,13 @@ columnas con capitular y folio en el pie.
   el editor para cambiar, crear (hereda el diseño) o eliminar números.
 - **Bookmarklet «➕ A Quiosco»**: arrastra el botón del editor a la barra de
   marcadores; desde cualquier artículo lo añade al número actual vía
-  `GET /add?url=…` (requiere el servidor arrancado).
+  `GET /add?url=…` (requiere el servidor arrancado). Los marcadores
+  `javascript:` no pueden tener favicon — si quieres icono, usa la extensión.
+- **Extensión de navegador** (`extension/`): icono Q morado junto a la barra
+  de direcciones; un clic añade el artículo abierto al número actual, con
+  ✓/✗ de confirmación sobre el icono. Instalación (Chrome/Edge):
+  `chrome://extensions` → activar «Modo de desarrollador» → «Cargar
+  descomprimida» → seleccionar la carpeta `quiosco/extension`.
 - **Contraportada**: «Raya de color» o «Área de color» (página completa del
   color de acento con el número en marca de agua). Junto al color de acento,
   muestras extraídas de la imagen de portada y cuentagotas nativo 🎨.

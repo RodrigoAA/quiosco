@@ -219,7 +219,6 @@ function bindPreviewTools() {
   };
   zoom.addEventListener('change', applyZoom);
   applyZoom();
-  $('#refresh').addEventListener('click', reloadPreview);
 }
 
 /* ---------- Quitar imágenes con clic (en la previsualización) ---------- */
