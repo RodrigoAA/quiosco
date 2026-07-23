@@ -1,5 +1,4 @@
 import express from 'express';
-import { spawn } from 'node:child_process';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -364,19 +363,6 @@ app.get('/api/img', async (req, res) => {
   } catch {
     res.status(500).end();
   }
-});
-
-// Abre el Explorador de Windows con el PDF exportado seleccionado
-app.post('/api/show-export', async (req, res) => {
-  const { name } = req.body || {};
-  const file = path.join(__dirname, 'exports', path.basename(name || ''));
-  try {
-    await fs.access(file);
-  } catch {
-    return res.status(404).json({ error: 'No existe ese PDF en exports/' });
-  }
-  spawn('explorer', ['/select,', file], { detached: true, stdio: 'ignore' }).unref();
-  res.json({ ok: true });
 });
 
 /* ================= Posts e hilos de X (Twitter) =================

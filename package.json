@@ -5,7 +5,8 @@
   "type": "module",
   "description": "Quiosco — maquetador local de revistas A4 a partir de artículos de Substack y blogs",
   "scripts": {
-    "start": "node server.js"
+    "start": "node server.js",
+    "sync-web": "node scripts/sync-web.mjs"
   },
   "dependencies": {
     "@mozilla/readability": "^0.5.0",
