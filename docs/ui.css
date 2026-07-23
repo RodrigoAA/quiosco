@@ -142,6 +142,31 @@ input[type="color"] {
 #addForm { display: flex; gap: 8px; }
 #addForm input { flex: 1; margin-top: 0; }
 
+.issue-row { display: flex; gap: 6px; }
+.issue-row select { flex: 1; margin: 0; }
+.issue-row .btn { padding: 7px 10px; }
+#bookmarklet { cursor: grab; }
+
+.palette-row {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  margin: -3px 0 10px;
+}
+.palette-label { font-size: 11px; color: var(--muted); }
+#swatches { display: flex; gap: 5px; }
+.swatch {
+  width: 22px;
+  height: 22px;
+  border-radius: 50%;
+  border: 2px solid #ffffff;
+  box-shadow: 0 0 0 1px #c9c4bc;
+  cursor: pointer;
+  padding: 0;
+}
+.swatch:hover { box-shadow: 0 0 0 2px var(--accent); }
+.palette-row .btn { padding: 3px 8px; margin-left: auto; }
+
 .error { color: #c0392b; font-size: 12px; margin: 8px 0 0; }
 .hidden { display: none; }
 .tip { font-size: 11px; color: var(--muted); line-height: 1.45; margin: 10px 0 0; }

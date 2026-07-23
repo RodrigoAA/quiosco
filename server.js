@@ -348,6 +348,21 @@ app.post('/api/export-pdf', async (_req, res) => {
   }
 });
 
+// Proxy de imágenes: permite leer los píxeles en canvas (los CDN de los
+// blogs no envían CORS, y sin esto el canvas queda «tainted»)
+app.get('/api/img', async (req, res) => {
+  const { url } = req.query;
+  if (!url || !/^https?:\/\//i.test(url)) return res.status(400).end();
+  try {
+    const r = await fetch(url, { headers: { 'user-agent': UA }, signal: AbortSignal.timeout(20000) });
+    if (!r.ok) return res.status(502).end();
+    res.set('content-type', r.headers.get('content-type') || 'image/jpeg');
+    res.send(Buffer.from(await r.arrayBuffer()));
+  } catch {
+    res.status(500).end();
+  }
+});
+
 // Abre el Explorador de Windows con el PDF exportado seleccionado
 app.post('/api/show-export', async (req, res) => {
   const { name } = req.body || {};

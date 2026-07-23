@@ -207,6 +207,94 @@ function bindPreviewTools() {
   $('#refresh').addEventListener('click', reloadPreview);
 }
 
+/* ---------- Paleta de la portada ---------- */
+
+function setAccent(hex) {
+  mag.settings.accent = hex;
+  $('#s-accent').value = hex;
+  scheduleSave();
+}
+
+// Carga la imagen apta para canvas: directa si el CDN da CORS; si no, proxy propio
+function loadCoverBitmap(url) {
+  const tryLoad = src => new Promise((resolve, reject) => {
+    const img = new Image();
+    img.crossOrigin = 'anonymous';
+    img.onload = () => resolve(img);
+    img.onerror = reject;
+    img.src = src;
+  });
+  return tryLoad(url).catch(() => tryLoad('/api/img?url=' + encodeURIComponent(url)));
+}
+
+// Colores dominantes: reduce a 64×64, cuantiza y puntúa por frecuencia y saturación
+function extractPalette(img, n = 5) {
+  const size = 64;
+  const canvas = document.createElement('canvas');
+  canvas.width = size;
+  canvas.height = size;
+  const ctx = canvas.getContext('2d', { willReadFrequently: true });
+  ctx.drawImage(img, 0, 0, size, size);
+  const data = ctx.getImageData(0, 0, size, size).data;
+
+  const buckets = new Map();
+  for (let i = 0; i < data.length; i += 4) {
+    if (data[i + 3] < 200) continue;
+    const key = `${data[i] >> 4}_${data[i + 1] >> 4}_${data[i + 2] >> 4}`;
+    const e = buckets.get(key) || { r: 0, g: 0, b: 0, count: 0 };
+    e.r += data[i]; e.g += data[i + 1]; e.b += data[i + 2]; e.count++;
+    buckets.set(key, e);
+  }
+
+  const candidates = [...buckets.values()].map(e => {
+    const r = e.r / e.count, g = e.g / e.count, b = e.b / e.count;
+    const max = Math.max(r, g, b) / 255, min = Math.min(r, g, b) / 255;
+    const l = (max + min) / 2;
+    const sat = max === min ? 0 : (max - min) / (1 - Math.abs(2 * l - 1));
+    return { r, g, b, count: e.count, sat, l };
+  })
+    .filter(x => x.l > 0.12 && x.l < 0.75)
+    .map(x => ({ ...x, score: x.count * (0.15 + x.sat) }))
+    .sort((a, b) => b.score - a.score);
+
+  const picked = [];
+  for (const x of candidates) {
+    if (picked.every(p => Math.hypot(p.r - x.r, p.g - x.g, p.b - x.b) > 48)) picked.push(x);
+    if (picked.length >= n) break;
+  }
+  const hex = v => Math.round(v).toString(16).padStart(2, '0');
+  return picked.map(x => `#${hex(x.r)}${hex(x.g)}${hex(x.b)}`);
+}
+
+async function initPalette() {
+  const dropBtn = $('#eyedropper');
+  if ('EyeDropper' in window) {
+    dropBtn.addEventListener('click', async () => {
+      try {
+        const r = await new EyeDropper().open();
+        setAccent(r.sRGBHex);
+      } catch { /* cancelado con Esc */ }
+    });
+  } else {
+    dropBtn.classList.add('hidden');
+  }
+
+  const coverUrl = mag.settings.coverImage || mag.articles.map(a => a.leadImage).find(Boolean);
+  if (coverUrl) {
+    try {
+      const img = await loadCoverBitmap(coverUrl);
+      const palette = extractPalette(img);
+      $('#swatches').innerHTML = palette.map(h =>
+        `<button class="swatch" type="button" style="background:${h}" title="${h}" data-hex="${h}"></button>`).join('');
+      $('#swatches').addEventListener('click', ev => {
+        const b = ev.target.closest('.swatch');
+        if (b) setAccent(b.dataset.hex);
+      });
+    } catch { /* imagen inaccesible: queda solo el cuentagotas */ }
+  }
+  $('#paletteRow').classList.remove('hidden');
+}
+
 /* ---------- Números (issues) ---------- */
 
 async function initIssues() {
@@ -301,6 +389,7 @@ async function init() {
   bindExport();
   initBookmarklet();
   await initIssues();
+  initPalette();
   status('Listo');
 }
 
