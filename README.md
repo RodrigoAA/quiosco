@@ -1,8 +1,25 @@
 # Quiosco — maquetador de revistas A4
 
-App local para convertir artículos de Substack o blogs en una revista A4
-lista para imprimir: portada, sumario con números de página, artículos a dos
+App local para convertir artículos de Substack, blogs y X en una revista A4
+lista para imprimir: portada, sumario con números de página, artículos en
 columnas con capitular y folio en el pie.
+
+- **5 tipografías** (Clásica/Georgia, Editorial/Playfair+Lora, Elegante/Garamond,
+  Prensa/Archivo+Newsreader, Moderna/Inter), empaquetadas en el repo — sin
+  llamadas a Google Fonts al maquetar.
+- **Columnas configurables**: 2 (revista), 3 (prensa) o 4 (boletín), global
+  y por artículo (el cuerpo de letra se ajusta solo).
+- En la vista de impresión puedes probar sin guardar con
+  `?font=editorial&cols=3` en la URL.
+
+## Versión web (GitHub Pages)
+
+En <https://rodrigoaa.github.io/quiosco/> hay una versión 100 % estática:
+la revista se guarda en el navegador (localStorage), la extracción se hace
+en el propio navegador vía proxies CORS públicos (r.jina.ai y alternativas;
+pueden fallar según el día) y el PDF se saca con Ctrl+P. Los botones
+Exportar/Importar JSON permiten mover la revista entre la versión web y la
+local (`data/magazine.json`). Para el PDF de imprenta, usa siempre la local.
 
 ## Arrancar
 

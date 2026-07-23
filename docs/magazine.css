@@ -1,0 +1,373 @@
+/* ============================================================
+   Quiosco — maquetación de revista en A4 (procesada por Paged.js)
+   ============================================================ */
+
+:root {
+  --accent: #b3402a;
+  --ink: #1a1a1a;
+  --muted: #6e6e6e;
+  --serif: Georgia, 'Palatino Linotype', 'Times New Roman', serif;
+  --display: Georgia, 'Palatino Linotype', 'Times New Roman', serif;
+  --sans: 'Segoe UI', 'Helvetica Neue', Arial, sans-serif;
+}
+
+@page {
+  size: A4;
+  margin: 16mm 15mm 19mm 15mm;
+
+  @bottom-left {
+    content: string(magtitle);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 7pt;
+    letter-spacing: 0.14em;
+    text-transform: uppercase;
+    color: #8a8a8a;
+  }
+  @bottom-right {
+    content: counter(page);
+    font-family: 'Segoe UI', Arial, sans-serif;
+    font-size: 9pt;
+    font-weight: 600;
+    color: #444444;
+  }
+}
+
+/* La portada va a sangre y sin folio */
+@page portada {
+  margin: 0;
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+html {
+  font-family: var(--serif);
+  color: var(--ink);
+}
+body { margin: 0; }
+
+img { max-width: 100%; }
+
+/* ---------- Portada ---------- */
+
+.cover {
+  page: portada;
+  height: 296mm;
+  box-sizing: border-box;
+  padding: 16mm 15mm 14mm;
+  display: flex;
+  flex-direction: column;
+}
+
+.cover .mag-name {
+  string-set: magtitle content(text);
+  font-family: var(--display);
+  font-size: 46pt;
+  font-weight: 800;
+  letter-spacing: -0.02em;
+  line-height: 0.98;
+  margin: 0;
+}
+
+.cover .issue-line {
+  display: flex;
+  justify-content: space-between;
+  gap: 6mm;
+  border-top: 1.4mm solid var(--accent);
+  margin: 4mm 0 0;
+  padding-top: 2.2mm;
+  font-family: var(--sans);
+  font-size: 9pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.14em;
+  color: #333333;
+}
+
+.cover-image {
+  flex: 1 1 auto;
+  min-height: 0;
+  margin: 8mm 0 7mm;
+  overflow: hidden;
+}
+.cover-image img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Sin imagen de portada: los titulares llenan el hueco */
+.cover.no-image .cover-headlines { margin-top: 14mm; }
+.cover.no-image .cover-headlines li { font-size: 17pt; margin: 6mm 0; }
+
+.cover-headlines {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.cover-headlines li {
+  font-family: var(--display);
+  font-size: 13.5pt;
+  font-weight: 700;
+  line-height: 1.22;
+  margin: 0 0 3.2mm;
+}
+.cover-headlines .ch-kicker {
+  display: block;
+  font-family: var(--sans);
+  font-size: 7.5pt;
+  font-weight: 600;
+  color: var(--accent);
+  text-transform: uppercase;
+  letter-spacing: 0.16em;
+  margin-bottom: 0.6mm;
+}
+
+/* ---------- Sumario ---------- */
+
+.toc h2 {
+  font-family: var(--display);
+  font-size: 24pt;
+  font-weight: 800;
+  margin: 0 0 7mm;
+  padding-bottom: 2.5mm;
+  border-bottom: 1.2mm solid var(--accent);
+}
+
+.toc ol {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.toc-entry { margin: 0 0 5.5mm; }
+
+.toc-line {
+  display: flex;
+  align-items: baseline;
+  gap: 2mm;
+}
+.toc-title {
+  font-family: var(--display);
+  font-size: 12.5pt;
+  font-weight: 700;
+  line-height: 1.25;
+}
+.toc-dots {
+  flex: 1 1 auto;
+  min-width: 6mm;
+  border-bottom: 1px dotted #a5a5a5;
+  transform: translateY(-1.2mm);
+}
+.toc-page { text-decoration: none; color: var(--ink); }
+.toc-page::after {
+  content: target-counter(attr(href), page);
+  font-family: var(--sans);
+  font-size: 10.5pt;
+  font-weight: 700;
+  color: var(--accent);
+}
+.toc-meta {
+  font-family: var(--sans);
+  font-size: 8pt;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.1em;
+  margin-top: 0.8mm;
+}
+
+/* ---------- Artículos ---------- */
+
+.article { break-before: page; }
+
+.article-header { margin-bottom: 5mm; }
+
+.kicker {
+  font-family: var(--sans);
+  font-size: 8pt;
+  font-weight: 700;
+  letter-spacing: 0.18em;
+  text-transform: uppercase;
+  color: var(--accent);
+  margin: 0 0 2mm;
+}
+
+.article-title {
+  font-family: var(--display);
+  font-size: 25pt;
+  font-weight: 800;
+  line-height: 1.06;
+  letter-spacing: -0.01em;
+  margin: 0 0 3mm;
+}
+
+.standfirst {
+  font-size: 11.5pt;
+  font-style: italic;
+  line-height: 1.35;
+  color: #3d3d3d;
+  margin: 0 0 3mm;
+}
+
+.byline {
+  display: inline-block;
+  font-family: var(--sans);
+  font-size: 8pt;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  color: var(--muted);
+  border-top: 0.4pt solid #bbbbbb;
+  padding-top: 1.6mm;
+  margin: 0;
+}
+
+figure.lead { margin: 4mm 0 0; }
+figure.lead img { width: 100%; display: block; }
+
+/* Cuerpo a dos columnas */
+.article-body {
+  columns: 2;
+  column-gap: 7mm;
+  column-rule: 0.3pt solid #d8d8d8;
+  font-size: 9.7pt;
+  line-height: 1.5;
+  text-align: justify;
+  hyphens: auto;
+  -webkit-hyphens: auto;
+  orphans: 2;
+  widows: 2;
+}
+
+.article-body p { margin: 0; }
+.article-body p + p { text-indent: 4.2mm; }
+
+/* Capitular en el primer párrafo (evitando fragmentos partidos por Paged.js) */
+.article-body p.opener:not([data-split-from])::first-letter {
+  float: left;
+  font-size: 32pt;
+  line-height: 0.82;
+  font-weight: 700;
+  color: var(--accent);
+  padding: 1pt 3pt 0 0;
+}
+
+/* Remate al final del artículo */
+.article-body p.closer:not([data-split-to])::after {
+  content: ' \25A0';
+  color: var(--accent);
+  font-size: 0.75em;
+}
+
+.article-body h2, .article-body h3, .article-body h4 {
+  text-align: left;
+  text-indent: 0;
+  line-height: 1.2;
+  break-after: avoid;
+  margin: 4.5mm 0 1.5mm;
+}
+.article-body h2 { font-size: 12.5pt; }
+.article-body h3 { font-size: 11pt; }
+.article-body h4 { font-size: 10pt; font-family: var(--sans); }
+.article-body h2 + p, .article-body h3 + p, .article-body h4 + p { text-indent: 0; }
+
+.article-body figure {
+  margin: 3.5mm 0;
+  break-inside: avoid;
+}
+.article-body img {
+  max-width: 100%;
+  height: auto;
+  display: block;
+  margin: 0 auto;
+}
+.article-body figcaption {
+  font-family: var(--sans);
+  font-size: 7.5pt;
+  line-height: 1.35;
+  color: var(--muted);
+  margin-top: 1.6mm;
+}
+
+.article-body blockquote {
+  break-inside: avoid;
+  margin: 3.5mm 0;
+  padding: 1mm 0 1mm 4mm;
+  border-left: 1mm solid var(--accent);
+  font-size: 10.5pt;
+  font-style: italic;
+  line-height: 1.4;
+  color: #333333;
+  text-align: left;
+}
+.article-body blockquote p { text-indent: 0; margin: 0 0 1.5mm; }
+
+.article-body a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.article-body hr {
+  border: none;
+  margin: 3.5mm 0;
+  text-align: center;
+}
+.article-body hr::after {
+  content: '\2022 \2022 \2022';
+  color: var(--muted);
+  font-size: 8pt;
+  letter-spacing: 0.6em;
+}
+
+.article-body ul, .article-body ol {
+  margin: 1.5mm 0 2.5mm;
+  padding-left: 5mm;
+}
+.article-body li { margin-bottom: 0.8mm; }
+
+.article-body pre {
+  white-space: pre-wrap;
+  word-break: break-word;
+  font-size: 7.5pt;
+  line-height: 1.4;
+  background: #f4f4f2;
+  padding: 2mm 2.5mm;
+  break-inside: avoid;
+  text-align: left;
+}
+.article-body code { font-size: 0.9em; }
+
+.article-body table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 8pt;
+  font-family: var(--sans);
+  break-inside: avoid;
+  margin: 2.5mm 0;
+}
+.article-body th, .article-body td {
+  border: 0.3pt solid #cccccc;
+  padding: 1mm 1.5mm;
+  text-align: left;
+}
+
+/* ---------- Variantes de columnas (2 es la base) ----------
+   A más columnas, columna más estrecha: se baja el cuerpo y,
+   a 4, se quita el justificado para evitar ríos de espacios. */
+
+.article.cols-3 .article-body {
+  columns: 3;
+  column-gap: 6mm;
+  font-size: 9.1pt;
+  line-height: 1.45;
+}
+.article.cols-3 .article-body p + p { text-indent: 3.5mm; }
+
+.article.cols-4 .article-body {
+  columns: 4;
+  column-gap: 5mm;
+  font-size: 8.4pt;
+  line-height: 1.42;
+  text-align: left;
+}
+.article.cols-4 .article-body p + p { text-indent: 3mm; }
+.article.cols-4 .article-body p.opener:not([data-split-from])::first-letter { font-size: 23pt; }
+.article.cols-4 .article-body blockquote { font-size: 9.5pt; }

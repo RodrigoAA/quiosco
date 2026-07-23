@@ -1,0 +1,62 @@
+/* ============================================================
+   Quiosco — tipografías empaquetadas (subset latin, woff2)
+   y emparejamientos de revista (html[data-font="…"])
+   ============================================================ */
+
+/* Playfair Display — titulares editoriales */
+@font-face { font-family: 'Playfair Display'; font-weight: 700; font-style: normal; src: url('fonts/playfair-display-700.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Playfair Display'; font-weight: 800; font-style: normal; src: url('fonts/playfair-display-800.woff2') format('woff2'); font-display: swap; }
+
+/* Lora — cuerpo serif contemporáneo */
+@font-face { font-family: 'Lora'; font-weight: 400; font-style: normal; src: url('fonts/lora-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Lora'; font-weight: 400; font-style: italic; src: url('fonts/lora-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Lora'; font-weight: 700; font-style: normal; src: url('fonts/lora-700.woff2') format('woff2'); font-display: swap; }
+
+/* Cormorant Garamond — titulares elegantes */
+@font-face { font-family: 'Cormorant Garamond'; font-weight: 700; font-style: normal; src: url('fonts/cormorant-garamond-700.woff2') format('woff2'); font-display: swap; }
+
+/* EB Garamond — cuerpo clásico */
+@font-face { font-family: 'EB Garamond'; font-weight: 400; font-style: normal; src: url('fonts/eb-garamond-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'EB Garamond'; font-weight: 400; font-style: italic; src: url('fonts/eb-garamond-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'EB Garamond'; font-weight: 700; font-style: normal; src: url('fonts/eb-garamond-700.woff2') format('woff2'); font-display: swap; }
+
+/* Newsreader — cuerpo estilo prensa */
+@font-face { font-family: 'Newsreader'; font-weight: 400; font-style: normal; src: url('fonts/newsreader-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Newsreader'; font-weight: 400; font-style: italic; src: url('fonts/newsreader-italic.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Newsreader'; font-weight: 700; font-style: normal; src: url('fonts/newsreader-700.woff2') format('woff2'); font-display: swap; }
+
+/* Archivo — titulares de prensa (grotesca) */
+@font-face { font-family: 'Archivo'; font-weight: 700; font-style: normal; src: url('fonts/archivo-700.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Archivo'; font-weight: 800; font-style: normal; src: url('fonts/archivo-800.woff2') format('woff2'); font-display: swap; }
+
+/* Inter — todo sans moderno */
+@font-face { font-family: 'Inter'; font-weight: 400; font-style: normal; src: url('fonts/inter-regular.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Inter'; font-weight: 700; font-style: normal; src: url('fonts/inter-700.woff2') format('woff2'); font-display: swap; }
+@font-face { font-family: 'Inter'; font-weight: 800; font-style: normal; src: url('fonts/inter-800.woff2') format('woff2'); font-display: swap; }
+
+/* ---------- Emparejamientos ----------
+   --display = titulares · --serif = cuerpo · --sans = metadatos  */
+
+html[data-font='editorial'] {
+  --serif: 'Lora', Georgia, serif;
+  --display: 'Playfair Display', Georgia, serif;
+}
+
+html[data-font='elegante'] {
+  --serif: 'EB Garamond', Georgia, serif;
+  --display: 'Cormorant Garamond', Georgia, serif;
+}
+/* Garamond tiene el ojo pequeño: sube un punto el cuerpo */
+html[data-font='elegante'] .article-body { font-size: 10.4pt; }
+
+html[data-font='prensa'] {
+  --serif: 'Newsreader', Georgia, serif;
+  --display: 'Archivo', 'Segoe UI', Arial, sans-serif;
+}
+
+html[data-font='moderna'] {
+  --serif: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --display: 'Inter', 'Segoe UI', Arial, sans-serif;
+  --sans: 'Inter', 'Segoe UI', Arial, sans-serif;
+}
+html[data-font='moderna'] .article-body { font-size: 9.2pt; }

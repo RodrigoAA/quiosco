@@ -17,6 +17,8 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'pagedjs', 'dist')));
 app.use('/exports', express.static(path.join(__dirname, 'exports')));
+// Copia de desarrollo de la versión web estática (la que vive en GitHub Pages)
+app.use('/web', express.static(path.join(__dirname, 'docs')));
 
 const DEFAULT_MAGAZINE = {
   settings: {
