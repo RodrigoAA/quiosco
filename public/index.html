@@ -131,6 +131,24 @@
       </section>
 
       <section class="panel">
+        <h2>Suscripciones</h2>
+        <form id="feedForm" class="issue-row">
+          <input id="feedUrl" type="text" placeholder="tunewsletter.substack.com"
+            title="Pega la web, el dominio o el feed de una newsletter/blog: encontraré su RSS y verás aquí sus últimos posts">
+          <button class="btn" type="submit" style="width: auto; padding: 0 12px">Seguir</button>
+        </form>
+        <p id="feedError" class="error hidden"></p>
+        <div id="feedChips" class="feed-chips"></div>
+        <div class="news-head">
+          <span>Novedades</span>
+          <button id="newsRefresh" class="btn icon" type="button" title="Buscar novedades">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+        <ul id="newsList" class="news-list"></ul>
+      </section>
+
+      <section class="panel">
         <h2>Desde el móvil</h2>
         <p id="tgStatus" class="tip" style="margin: 0 0 10px"></p>
         <div id="tgForm" class="issue-row">

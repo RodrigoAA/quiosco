@@ -209,6 +209,116 @@ function bindAddForm() {
   });
 }
 
+/* ---------- Suscripciones (RSS) ---------- */
+
+async function addArticleByUrl(url) {
+  const r = await fetch('/api/extract', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ url })
+  });
+  const data = await r.json();
+  if (!r.ok) throw new Error(data.error || 'Error desconocido');
+  mag.articles.push({ id: crypto.randomUUID(), included: true, ...data });
+  renderArticles();
+  scheduleSave();
+  return data;
+}
+
+async function loadFeedsUI() {
+  try {
+    const d = await (await fetch('/api/feeds')).json();
+    $('#feedChips').innerHTML = d.feeds.map(f =>
+      `<span class="chip" data-url="${esc(f.url)}">${esc(f.title)}<button class="chip-x" type="button" title="Dejar de seguir">×</button></span>`
+    ).join('');
+  } catch { /* servidor no disponible */ }
+}
+
+async function loadNews() {
+  const list = $('#newsList');
+  list.innerHTML = '<li class="tip" style="margin: 6px 0">Buscando novedades…</li>';
+  try {
+    const d = await (await fetch('/api/news')).json();
+    if (!d.items.length) {
+      list.innerHTML = '<li class="tip" style="margin: 6px 0">Nada nuevo por aquí. Sigue algún feed arriba.</li>';
+      return;
+    }
+    list.innerHTML = d.items.map(it => `<li class="news-item" data-url="${esc(it.link)}">
+      <div class="news-info">
+        <span class="news-src">${esc(it.source)}${it.date ? ' · ' + new Date(it.date).toLocaleDateString('es-ES', { day: 'numeric', month: 'short' }) : ''}</span>
+        <span class="news-title">${esc(it.title)}</span>
+      </div>
+      ${it.added
+        ? '<span class="news-added" title="Ya está en la revista">✓</span>'
+        : '<button class="btn news-add" type="button" title="Añadir al número actual">＋</button>'}
+    </li>`).join('');
+  } catch {
+    list.innerHTML = '';
+  }
+}
+
+function bindFeeds() {
+  $('#feedForm').addEventListener('submit', async ev => {
+    ev.preventDefault();
+    const errEl = $('#feedError');
+    errEl.classList.add('hidden');
+    const value = $('#feedUrl').value.trim();
+    if (!value) return;
+    const btn = $('#feedForm button');
+    btn.disabled = true;
+    try {
+      const r = await fetch('/api/feeds', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: value })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error');
+      $('#feedUrl').value = '';
+      await loadFeedsUI();
+      loadNews();
+    } catch (e) {
+      errEl.textContent = e.message;
+      errEl.classList.remove('hidden');
+    } finally {
+      btn.disabled = false;
+    }
+  });
+
+  $('#feedChips').addEventListener('click', async ev => {
+    const x = ev.target.closest('.chip-x');
+    if (!x) return;
+    await fetch('/api/feeds/remove', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ url: x.closest('.chip').dataset.url })
+    });
+    await loadFeedsUI();
+    loadNews();
+  });
+
+  $('#newsList').addEventListener('click', async ev => {
+    const btn = ev.target.closest('.news-add');
+    if (!btn) return;
+    const li = btn.closest('.news-item');
+    btn.disabled = true;
+    btn.textContent = '…';
+    try {
+      const art = await addArticleByUrl(li.dataset.url);
+      btn.outerHTML = '<span class="news-added" title="Ya está en la revista">✓</span>';
+      status(`«${art.title}» añadido ✓`);
+    } catch (e) {
+      btn.disabled = false;
+      btn.textContent = '＋';
+      status('Error al añadir: ' + e.message, true);
+    }
+  });
+
+  $('#newsRefresh').addEventListener('click', loadNews);
+  loadFeedsUI();
+  loadNews();
+}
+
 /* ---------- Bandeja del móvil (bot de Telegram) ---------- */
 
 async function bindTelegram() {
@@ -718,6 +828,7 @@ async function init() {
   bindFocusMode();
   bindTopNav();
   initImageRemoval();
+  bindFeeds();
   bindTelegram();
   await initIssues();
   initPalette();

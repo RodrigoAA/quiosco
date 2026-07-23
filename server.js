@@ -366,6 +366,192 @@ app.get('/api/img', async (req, res) => {
   }
 });
 
+/* ================= Suscripciones (RSS) =================
+   Sigues tus newsletters/blogs y el editor muestra sus últimos posts para
+   añadirlos con un clic. Los feeds viven en data/feeds.json. */
+
+const FEEDS_FILE = path.join(DATA_DIR, 'feeds.json');
+
+async function loadFeeds() {
+  try {
+    return JSON.parse(await fs.readFile(FEEDS_FILE, 'utf8'));
+  } catch {
+    return { feeds: [] };
+  }
+}
+
+async function saveFeeds(data) {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.writeFile(FEEDS_FILE, JSON.stringify(data, null, 2), 'utf8');
+}
+
+function xmlText(el, tag) {
+  const n = el.getElementsByTagName(tag)[0];
+  return n ? n.textContent.trim() : '';
+}
+
+// RSS 2.0 y Atom, con getElementsByTagName (tolerante a namespaces)
+function parseFeedXml(xml, feedUrl) {
+  let doc;
+  try {
+    const virtualConsole = new VirtualConsole();
+    doc = new JSDOM(xml, { contentType: 'text/xml', virtualConsole }).window.document;
+  } catch {
+    return null;
+  }
+  if (doc.getElementsByTagName('parsererror').length) return null;
+
+  const channel = doc.getElementsByTagName('channel')[0];
+  if (channel) {
+    const items = [];
+    for (const it of channel.getElementsByTagName('item')) {
+      const title = xmlText(it, 'title');
+      const link = xmlText(it, 'link');
+      if (title && link) items.push({ title, link, date: xmlText(it, 'pubDate') });
+    }
+    return { title: xmlText(channel, 'title') || feedUrl, items };
+  }
+
+  const atom = doc.getElementsByTagName('feed')[0];
+  if (atom) {
+    const items = [];
+    for (const it of atom.getElementsByTagName('entry')) {
+      const title = xmlText(it, 'title');
+      let link = '';
+      for (const l of it.getElementsByTagName('link')) {
+        const rel = l.getAttribute('rel') || 'alternate';
+        if (rel === 'alternate') { link = l.getAttribute('href') || ''; break; }
+      }
+      if (title && link) {
+        items.push({ title, link, date: xmlText(it, 'published') || xmlText(it, 'updated') });
+      }
+    }
+    return { title: xmlText(atom, 'title') || feedUrl, items };
+  }
+  return null;
+}
+
+async function fetchFeed(url) {
+  const r = await fetch(url, {
+    redirect: 'follow',
+    signal: AbortSignal.timeout(15000),
+    headers: { 'user-agent': UA, accept: 'application/rss+xml, application/atom+xml, text/xml, */*' }
+  });
+  if (!r.ok) return null;
+  const body = await r.text();
+  if (!body.trimStart().startsWith('<')) return null;
+  const parsed = parseFeedXml(body, url);
+  return parsed && parsed.items.length ? { feedUrl: r.url || url, ...parsed } : null;
+}
+
+// Acepta la web, el dominio o el feed directamente y encuentra el RSS
+async function resolveFeed(input) {
+  let url = input.trim();
+  if (!/^https?:\/\//i.test(url)) url = 'https://' + url;
+  let u;
+  try {
+    u = new URL(url);
+  } catch {
+    throw new Error('Eso no parece una URL');
+  }
+  const candidates = [url];
+  if (!/\/(feed|rss|atom)/i.test(u.pathname) && !u.pathname.endsWith('.xml')) {
+    candidates.push(
+      new URL('/feed', u).href,
+      new URL('/rss', u).href,
+      new URL('/feed.xml', u).href,
+      new URL('/atom.xml', u).href
+    );
+  }
+  for (const c of candidates) {
+    try {
+      const feed = await fetchFeed(c);
+      if (feed) return feed;
+    } catch { /* siguiente candidato */ }
+  }
+  // Último intento: <link rel="alternate" type="application/rss+xml"> en el HTML
+  try {
+    const r = await fetch(url, { headers: { 'user-agent': UA }, redirect: 'follow', signal: AbortSignal.timeout(15000) });
+    const html = await r.text();
+    const linkTag = html.match(/<link[^>]+type=["']application\/(?:rss|atom)\+xml["'][^>]*>/i);
+    const href = linkTag && linkTag[0].match(/href=["']([^"']+)["']/i);
+    if (href) {
+      const feed = await fetchFeed(new URL(href[1], r.url || url).href);
+      if (feed) return feed;
+    }
+  } catch { /* sin suerte */ }
+  throw new Error('No encontré un feed RSS en esa dirección');
+}
+
+function normUrl(u) {
+  try {
+    const x = new URL(u);
+    return (x.origin + x.pathname).replace(/\/$/, '').toLowerCase();
+  } catch {
+    return u;
+  }
+}
+
+app.get('/api/feeds', async (_req, res) => {
+  res.json(await loadFeeds());
+});
+
+app.post('/api/feeds', async (req, res) => {
+  try {
+    const { url } = req.body || {};
+    if (!url || !url.trim()) return res.status(400).json({ error: 'Falta la URL' });
+    const { feedUrl, title } = await resolveFeed(url);
+    const data = await loadFeeds();
+    if (data.feeds.some(f => f.url === feedUrl)) {
+      return res.status(409).json({ error: 'Ya sigues ese feed' });
+    }
+    data.feeds.push({ url: feedUrl, title });
+    await saveFeeds(data);
+    res.json({ ok: true, url: feedUrl, title });
+  } catch (e) {
+    res.status(400).json({ error: e.message });
+  }
+});
+
+app.post('/api/feeds/remove', async (req, res) => {
+  const { url } = req.body || {};
+  const data = await loadFeeds();
+  data.feeds = data.feeds.filter(f => f.url !== url);
+  await saveFeeds(data);
+  res.json({ ok: true });
+});
+
+// Últimos posts de todos los feeds, marcando los que ya están en algún número
+app.get('/api/news', async (_req, res) => {
+  const data = await loadFeeds();
+  const existing = new Set();
+  try {
+    await ensureState();
+    for (const f of (await fs.readdir(ISSUES_DIR)).filter(n => n.endsWith('.json'))) {
+      try {
+        const mag = JSON.parse(await fs.readFile(path.join(ISSUES_DIR, f), 'utf8'));
+        for (const a of mag.articles || []) if (a.url) existing.add(normUrl(a.url));
+      } catch { /* número corrupto: se omite */ }
+    }
+  } catch { /* sin números aún */ }
+
+  const results = await Promise.allSettled(data.feeds.map(async f => {
+    const feed = await fetchFeed(f.url);
+    if (!feed) throw new Error('feed ilegible');
+    return feed.items.slice(0, 12).map(it => ({
+      title: it.title,
+      link: it.link,
+      date: it.date,
+      source: f.title,
+      added: existing.has(normUrl(it.link))
+    }));
+  }));
+
+  const items = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
+  items.sort((a, b) => new Date(b.date || 0) - new Date(a.date || 0));
+  res.json({ items: items.slice(0, 40), fallos: results.filter(r => r.status === 'rejected').length });
+});
+
 /* ================= Bandeja del móvil: bot de Telegram =================
    Compartes un enlace al bot desde el móvil (X, Gmail…) y Quiosco lo extrae
    y lo añade al número actual. Telegram hace de cola: si el PC está apagado,

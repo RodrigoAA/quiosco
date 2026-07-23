@@ -53,6 +53,16 @@ en cualquier artículo lo añade al número actual, con ✓/✗ sobre el icono.
 Instalación: `chrome://extensions` → «Modo de desarrollador» → «Cargar
 descomprimida» → carpeta `quiosco/extension`. Requiere Quiosco arrancado.
 
+### Suscripciones (el quiosco se llena solo)
+
+En el panel **Suscripciones** pega la web de tus newsletters/blogs (vale el
+dominio a secas: `honos.substack.com` o `henrikkarlsson.xyz` — Quiosco
+encuentra el RSS solo). El panel **Novedades** muestra los últimos posts de
+todas tus fuentes, ordenados por fecha, con **＋ para añadir** al número
+actual y **✓** en los que ya están en algún número (aunque los añadieras con
+otra URL: se normalizan los parámetros de tracking). Los feeds viven en
+`data/feeds.json`.
+
 ### Añadir desde el móvil
 
 Los artículos se suelen descubrir en el móvil (app de X, newsletters en

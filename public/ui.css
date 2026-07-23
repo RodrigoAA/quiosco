@@ -278,6 +278,97 @@ input[type="color"] {
 }
 .art-edit a { font-size: 12px; color: var(--accent); }
 
+/* ---------- Suscripciones ---------- */
+
+.feed-chips {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+  margin-top: 10px;
+}
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  padding: 3px 6px 3px 10px;
+  font-size: 11.5px;
+  color: var(--ink);
+  background: var(--hover);
+  border-radius: 999px;
+}
+.chip-x {
+  border: none;
+  background: none;
+  color: var(--muted);
+  font-size: 13px;
+  cursor: pointer;
+  padding: 0 3px;
+  border-radius: 50%;
+  line-height: 1;
+}
+.chip-x:hover { color: var(--danger); }
+
+.news-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  margin: 14px 0 4px;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.09em;
+  color: var(--muted);
+}
+.news-head .btn.icon { width: 28px; height: 26px; }
+.news-list {
+  list-style: none;
+  margin: 0;
+  padding: 0;
+}
+.news-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 2px;
+  border-top: 1px solid var(--line);
+}
+.news-item:first-child { border-top: none; }
+.news-info {
+  flex: 1;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+}
+.news-src {
+  font-size: 10.5px;
+  color: var(--muted);
+  text-transform: uppercase;
+  letter-spacing: 0.05em;
+}
+.news-title {
+  font-size: 12.5px;
+  font-weight: 600;
+  line-height: 1.3;
+  overflow: hidden;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
+.news-add {
+  width: 28px;
+  height: 28px;
+  padding: 0;
+  font-size: 15px;
+  flex-shrink: 0;
+}
+.news-added {
+  width: 28px;
+  text-align: center;
+  color: #2e7d32;
+  font-weight: 700;
+  flex-shrink: 0;
+}
+
 /* ---------- Paleta de la portada ---------- */
 
 .palette-row {
