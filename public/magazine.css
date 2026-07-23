@@ -123,6 +123,62 @@ img { max-width: 100%; }
   margin-bottom: 0.6mm;
 }
 
+/* ---------- Contraportada y blancas de relleno ---------- */
+
+/* Sin folio ni pie: son las páginas de cierre del pliego */
+@page contraportada {
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+@page blanca {
+  @bottom-left { content: none; }
+  @bottom-right { content: none; }
+}
+
+.filler-page {
+  page: blanca;
+  break-before: page;
+  height: 40mm;
+}
+
+.backcover {
+  page: contraportada;
+  break-before: page;
+  height: 250mm;
+  display: flex;
+  flex-direction: column;
+  justify-content: flex-end;
+}
+.bc-rule {
+  height: 1.4mm;
+  background: var(--accent);
+  margin-bottom: 4mm;
+}
+.bc-name {
+  font-family: var(--display);
+  font-size: 20pt;
+  font-weight: 800;
+  letter-spacing: -0.01em;
+  margin: 0 0 1mm;
+}
+.bc-issue {
+  font-family: var(--sans);
+  font-size: 9pt;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.12em;
+  color: #333333;
+  margin: 0 0 4mm;
+}
+.bc-colophon {
+  font-family: var(--sans);
+  font-size: 8pt;
+  line-height: 1.55;
+  color: var(--muted);
+  max-width: 125mm;
+  margin: 0;
+}
+
 /* ---------- Sumario ---------- */
 
 .toc h2 {

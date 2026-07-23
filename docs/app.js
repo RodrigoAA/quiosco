@@ -10,6 +10,7 @@ const DEFAULT_MAGAZINE = {
     accent: '#b3402a',
     font: 'clasica',
     columns: '2',
+    finish: 'caballete',
     coverImage: ''
   },
   articles: []
@@ -23,7 +24,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'coverImage'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'finish', 'coverImage'];
 
 function loadMag() {
   try {
@@ -73,6 +74,7 @@ function bindSettings() {
   if (mag.settings.font === 'serif' || !mag.settings.font) mag.settings.font = 'clasica';
   if (mag.settings.font === 'sans') mag.settings.font = 'moderna';
   if (!mag.settings.columns) mag.settings.columns = '2';
+  if (!mag.settings.finish) mag.settings.finish = 'caballete';
 
   for (const f of SETTING_FIELDS) {
     const input = $('#s-' + f);

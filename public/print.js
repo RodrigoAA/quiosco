@@ -42,6 +42,18 @@ function coverHTML(s, arts) {
   </section>`;
 }
 
+function backcoverHTML(s, arts) {
+  const date = s.date || new Date().toLocaleDateString('es-ES', { month: 'long', year: 'numeric' });
+  const sources = [...new Set(arts.map(a => a.siteName || hostFromUrl(a.url)).filter(Boolean))];
+  return `<section class="backcover">
+    <div class="bc-rule"></div>
+    <p class="bc-name">${esc(s.title)}</p>
+    <p class="bc-issue">${esc([s.issue, date].filter(Boolean).join(' · '))}</p>
+    <p class="bc-colophon">${esc(s.subtitle || 'Selección personal de lecturas')}.
+    Fuentes de este número: ${sources.map(esc).join(' · ')}.</p>
+  </section>`;
+}
+
 function tocHTML(arts) {
   return `<section class="toc">
     <h2>Sumario</h2>
@@ -144,6 +156,8 @@ async function main() {
   font = FONT_ALIASES[font] || font;
   if (font !== 'clasica') document.documentElement.dataset.font = font;
   const globalCols = Math.min(4, Math.max(2, parseInt(qp.get('cols') || s.columns, 10) || 2));
+  // Acabado «caballete»: contraportada al final y total de páginas múltiplo de 4
+  const saddle = (qp.get('finish') || s.finish || 'caballete') === 'caballete';
 
   if (!arts.length) {
     document.getElementById('pages').innerHTML =
@@ -155,7 +169,8 @@ async function main() {
 
   const content = document.createElement('div');
   content.innerHTML = coverHTML(s, arts) + tocHTML(arts)
-    + arts.map((a, i) => articleHTML(a, i, globalCols)).join('');
+    + arts.map((a, i) => articleHTML(a, i, globalCols)).join('')
+    + (saddle ? backcoverHTML(s, arts) : '');
 
   // Las fuentes deben estar cargadas ANTES de que Paged.js mida el texto
   const FONT_FAMILIES = {
@@ -185,11 +200,32 @@ async function main() {
     }
   });
 
+  // Paged.js consume los nodos al maquetar: se guarda el HTML ya limpio
+  // para poder reconstruir el contenido en la segunda pasada.
+  const cleanedHTML = content.innerHTML;
+  const pagesEl = document.getElementById('pages');
+
   try {
     const { Previewer } = await import('/vendor/paged.esm.js');
-    const previewer = new Previewer();
-    const result = await previewer.preview(content, ['/magazine.css'], document.getElementById('pages'));
+    let result = await new Previewer().preview(content, ['/magazine.css'], pagesEl);
+
+    // Segunda pasada: blancas antes de la contraportada hasta múltiplo de 4
+    if (saddle) {
+      const needed = (4 - (result.total % 4)) % 4;
+      if (needed > 0) {
+        status.textContent = 'Cuadrando pliegos…';
+        pagesEl.innerHTML = '';
+        const content2 = document.createElement('div');
+        content2.innerHTML = cleanedHTML.replace(
+          '<section class="backcover"',
+          '<section class="filler-page"></section>'.repeat(needed) + '<section class="backcover"'
+        );
+        result = await new Previewer().preview(content2, ['/magazine.css'], pagesEl);
+      }
+    }
+
     status.textContent = `${result.total} páginas` +
+      (saddle ? ' (múltiplo de 4 ✓)' : '') +
       (removedImgs ? ` · ${removedImgs} imagen(es) rota(s) omitida(s)` : '');
     printBtn.disabled = false;
     window.__pagedStatus = { done: true, pages: result.total };

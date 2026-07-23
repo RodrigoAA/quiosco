@@ -29,6 +29,7 @@ const DEFAULT_MAGAZINE = {
     accent: '#b3402a',
     font: 'clasica',
     columns: '2',
+    finish: 'caballete',
     coverImage: ''
   },
   articles: []
