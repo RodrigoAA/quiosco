@@ -315,6 +315,41 @@ function bindFeeds() {
   });
 
   $('#newsRefresh').addEventListener('click', loadNews);
+
+  // Importar todas las suscripciones de Substack (JSON pegado)
+  $('#ssImportToggle').addEventListener('click', ev => {
+    ev.preventDefault();
+    $('#ssImport').classList.toggle('hidden');
+  });
+  $('#ssImportBtn').addEventListener('click', async () => {
+    const json = $('#ssJson').value.trim();
+    if (!json) return;
+    const btn = $('#ssImportBtn');
+    btn.disabled = true;
+    btn.textContent = 'Importando…';
+    try {
+      const r = await fetch('/api/feeds/import-substack', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ json })
+      });
+      const data = await r.json();
+      if (!r.ok) throw new Error(data.error || 'Error');
+      status(`${data.added} fuente(s) importadas`
+        + (data.skipped ? `, ${data.skipped} ya seguidas` : '')
+        + (data.failed.length ? ` · sin feed: ${data.failed.join(', ')}` : ''));
+      $('#ssJson').value = '';
+      $('#ssImport').classList.add('hidden');
+      await loadFeedsUI();
+      loadNews();
+    } catch (e) {
+      status('Importación: ' + e.message, true);
+    } finally {
+      btn.disabled = false;
+      btn.textContent = 'Importar';
+    }
+  });
+
   loadFeedsUI();
   loadNews();
 }

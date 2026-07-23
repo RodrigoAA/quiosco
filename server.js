@@ -513,6 +513,61 @@ app.post('/api/feeds', async (req, res) => {
   }
 });
 
+// Importación en un paso desde Substack: el usuario pega el JSON de
+// substack.com/api/v1/subscriptions (sesión iniciada en su navegador)
+app.post('/api/feeds/import-substack', async (req, res) => {
+  let payload = req.body && req.body.json;
+  if (typeof payload === 'string') {
+    try {
+      payload = JSON.parse(payload);
+    } catch {
+      return res.status(400).json({ error: 'Eso no es JSON válido. Copia TODO el texto de la página de suscripciones.' });
+    }
+  }
+  const subs = Array.isArray(payload) ? payload
+    : Array.isArray(payload?.subscriptions) ? payload.subscriptions
+    : Array.isArray(payload?.publications) ? payload.publications
+    : null;
+  if (!subs) return res.status(400).json({ error: 'No encuentro la lista de suscripciones en ese JSON' });
+
+  const candidates = [];
+  for (const s of subs) {
+    const pub = s.publication || s.pub || s;
+    if (!pub || typeof pub !== 'object') continue;
+    const base = pub.custom_domain
+      ? `https://${String(pub.custom_domain).replace(/^https?:\/\//, '')}`
+      : pub.subdomain ? `https://${pub.subdomain}.substack.com` : null;
+    if (base) candidates.push({ base, name: pub.name || base });
+  }
+  if (!candidates.length) return res.status(400).json({ error: 'El JSON no contiene publicaciones reconocibles' });
+
+  const data = await loadFeeds();
+  const results = await Promise.allSettled(candidates.map(async c => {
+    const feed = await fetchFeed(`${c.base}/feed`);
+    if (!feed) throw new Error(c.name);
+    return { url: feed.feedUrl, title: feed.title || c.name };
+  }));
+
+  let added = 0;
+  let skipped = 0;
+  const failed = [];
+  for (let i = 0; i < results.length; i++) {
+    const r = results[i];
+    if (r.status !== 'fulfilled') {
+      failed.push(candidates[i].name);
+      continue;
+    }
+    if (data.feeds.some(f => f.url === r.value.url)) {
+      skipped++;
+      continue;
+    }
+    data.feeds.push(r.value);
+    added++;
+  }
+  await saveFeeds(data);
+  res.json({ ok: true, added, skipped, failed });
+});
+
 app.post('/api/feeds/remove', async (req, res) => {
   const { url } = req.body || {};
   const data = await loadFeeds();

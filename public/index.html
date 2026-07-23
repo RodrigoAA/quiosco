@@ -139,6 +139,14 @@
         </form>
         <p id="feedError" class="error hidden"></p>
         <div id="feedChips" class="feed-chips"></div>
+        <p class="tip"><a id="ssImportToggle" href="#">Importar todas mis suscripciones de Substack…</a></p>
+        <div id="ssImport" class="hidden">
+          <p class="tip" style="margin: 6px 0 8px">1. Abre
+            <a href="https://substack.com/api/v1/subscriptions" target="_blank">substack.com/api/v1/subscriptions</a>
+            (con tu sesión de Substack iniciada) · 2. Copia todo el texto · 3. Pégalo aquí:</p>
+          <textarea id="ssJson" rows="3" placeholder='{"subscriptions": [ … ]}'></textarea>
+          <button id="ssImportBtn" class="btn" type="button" style="margin-top: 8px">Importar</button>
+        </div>
         <div class="news-head">
           <span>Novedades</span>
           <button id="newsRefresh" class="btn icon" type="button" title="Buscar novedades">
