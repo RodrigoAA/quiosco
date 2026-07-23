@@ -42,8 +42,19 @@
 
   <main>
     <aside id="sidebar">
-      <section class="panel">
-        <h2>Revista</h2>
+      <details class="panel" id="pn-articulos" open>
+        <summary>Artículos</summary>
+        <form id="addForm">
+          <input id="addUrl" type="url" placeholder="https://…" required
+            title="Substack, blog o post/hilo de X. Para un hilo: pega cualquier post; si no está en ThreadReaderApp, pega el último para tenerlo completo">
+          <button id="addBtn" class="btn primary" type="submit">Añadir</button>
+        </form>
+        <p id="addError" class="error hidden"></p>
+        <ul id="articleList"></ul>
+      </details>
+
+      <details class="panel" id="pn-revista" open>
+        <summary>Revista</summary>
         <label>Título
           <input id="s-title" type="text">
         </label>
@@ -68,10 +79,10 @@
             title="Carga un magazine.json de la app local o de otro navegador">Importar JSON</button>
           <input id="importFile" type="file" accept=".json,application/json" class="hidden">
         </div>
-      </section>
+      </details>
 
-      <section class="panel">
-        <h2>Diseño</h2>
+      <details class="panel" id="pn-diseno">
+        <summary>Diseño</summary>
         <label>Color de acento
           <input id="s-accent" type="color">
         </label>
@@ -126,18 +137,7 @@
             <option value="normal">Hojas sueltas / espiral — sin contraportada</option>
           </select>
         </label>
-      </section>
-
-      <section class="panel">
-        <h2>Artículos</h2>
-        <form id="addForm">
-          <input id="addUrl" type="url" placeholder="https://…" required
-            title="Substack, blog o post/hilo de X. Para un hilo: pega cualquier post; si no está en ThreadReaderApp, pega el último para tenerlo completo">
-          <button id="addBtn" class="btn primary" type="submit">Añadir</button>
-        </form>
-        <p id="addError" class="error hidden"></p>
-        <ul id="articleList"></ul>
-      </section>
+      </details>
     </aside>
 
     <section id="previewWrap">

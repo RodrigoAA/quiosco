@@ -655,10 +655,27 @@ function bindArticlesAfterImport() {
   renderArticles();
 }
 
+/* ---------- Paneles plegables con memoria ---------- */
+
+function bindPanels() {
+  let saved = {};
+  try {
+    saved = JSON.parse(localStorage.getItem('quiosco-panels')) || {};
+  } catch { /* primera vez */ }
+  document.querySelectorAll('details.panel').forEach(p => {
+    if (p.id && p.id in saved) p.open = saved[p.id];
+    p.addEventListener('toggle', () => {
+      saved[p.id] = p.open;
+      localStorage.setItem('quiosco-panels', JSON.stringify(saved));
+    });
+  });
+}
+
 /* ---------- Arranque ---------- */
 
 function init() {
   mag = loadMag();
+  bindPanels();
   bindSettings();
   renderArticles();
   bindArticleList();

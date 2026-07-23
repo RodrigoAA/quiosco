@@ -30,18 +30,55 @@
 
   <main>
     <aside id="sidebar">
-      <section class="panel">
-        <h2>Número</h2>
+      <details class="panel" id="pn-numero" open>
+        <summary>Número</summary>
         <div class="issue-row">
           <select id="issueSelect" title="Cada número guarda su propia selección de artículos"></select>
           <button id="newIssue" class="btn" type="button"
             title="Nuevo número: hereda el diseño y empieza sin artículos">＋</button>
           <button id="delIssue" class="btn" type="button" title="Eliminar este número">🗑</button>
         </div>
-      </section>
+      </details>
 
-      <section class="panel">
-        <h2>Revista</h2>
+      <details class="panel" id="pn-articulos" open>
+        <summary>Artículos</summary>
+        <form id="addForm">
+          <input id="addUrl" type="url" placeholder="https://…" required
+            title="Substack, blog o post/hilo de X. Para un hilo: pega cualquier post; si no está en ThreadReaderApp, pega el último para tenerlo completo">
+          <button id="addBtn" class="btn primary" type="submit">Añadir</button>
+        </form>
+        <p id="addError" class="error hidden"></p>
+        <ul id="articleList"></ul>
+      </details>
+
+      <details class="panel" id="pn-suscripciones" open>
+        <summary>Suscripciones</summary>
+        <form id="feedForm" class="issue-row">
+          <input id="feedUrl" type="text" placeholder="tunewsletter.substack.com"
+            title="Pega la web, el dominio o el feed de una newsletter/blog: encontraré su RSS y verás aquí sus últimos posts">
+          <button class="btn" type="submit" style="width: auto; padding: 0 12px">Seguir</button>
+        </form>
+        <p id="feedError" class="error hidden"></p>
+        <div id="feedChips" class="feed-chips"></div>
+        <p class="tip"><a id="ssImportToggle" href="#">Importar todas mis suscripciones de Substack…</a></p>
+        <div id="ssImport" class="hidden">
+          <p class="tip" style="margin: 6px 0 8px">1. Abre
+            <a href="https://substack.com/api/v1/subscriptions" target="_blank">substack.com/api/v1/subscriptions</a>
+            (con tu sesión de Substack iniciada) · 2. Copia todo el texto · 3. Pégalo aquí:</p>
+          <textarea id="ssJson" rows="3" placeholder='{"subscriptions": [ … ]}'></textarea>
+          <button id="ssImportBtn" class="btn" type="button" style="margin-top: 8px">Importar</button>
+        </div>
+        <div class="news-head">
+          <span>Novedades</span>
+          <button id="newsRefresh" class="btn icon" type="button" title="Buscar novedades">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
+          </button>
+        </div>
+        <ul id="newsList" class="news-list"></ul>
+      </details>
+
+      <details class="panel" id="pn-revista">
+        <summary>Revista</summary>
         <label>Título
           <input id="s-title" type="text">
         </label>
@@ -59,10 +96,10 @@
         <label>Imagen de portada (URL)
           <input id="s-coverImage" type="text" placeholder="vacío = primera imagen disponible">
         </label>
-      </section>
+      </details>
 
-      <section class="panel">
-        <h2>Diseño</h2>
+      <details class="panel" id="pn-diseno">
+        <summary>Diseño</summary>
         <label>Color de acento
           <input id="s-accent" type="color">
         </label>
@@ -117,54 +154,17 @@
             <option value="normal">Hojas sueltas / espiral — sin contraportada</option>
           </select>
         </label>
-      </section>
+      </details>
 
-      <section class="panel">
-        <h2>Artículos</h2>
-        <form id="addForm">
-          <input id="addUrl" type="url" placeholder="https://…" required
-            title="Substack, blog o post/hilo de X. Para un hilo: pega cualquier post; si no está en ThreadReaderApp, pega el último para tenerlo completo">
-          <button id="addBtn" class="btn primary" type="submit">Añadir</button>
-        </form>
-        <p id="addError" class="error hidden"></p>
-        <ul id="articleList"></ul>
-      </section>
-
-      <section class="panel">
-        <h2>Suscripciones</h2>
-        <form id="feedForm" class="issue-row">
-          <input id="feedUrl" type="text" placeholder="tunewsletter.substack.com"
-            title="Pega la web, el dominio o el feed de una newsletter/blog: encontraré su RSS y verás aquí sus últimos posts">
-          <button class="btn" type="submit" style="width: auto; padding: 0 12px">Seguir</button>
-        </form>
-        <p id="feedError" class="error hidden"></p>
-        <div id="feedChips" class="feed-chips"></div>
-        <p class="tip"><a id="ssImportToggle" href="#">Importar todas mis suscripciones de Substack…</a></p>
-        <div id="ssImport" class="hidden">
-          <p class="tip" style="margin: 6px 0 8px">1. Abre
-            <a href="https://substack.com/api/v1/subscriptions" target="_blank">substack.com/api/v1/subscriptions</a>
-            (con tu sesión de Substack iniciada) · 2. Copia todo el texto · 3. Pégalo aquí:</p>
-          <textarea id="ssJson" rows="3" placeholder='{"subscriptions": [ … ]}'></textarea>
-          <button id="ssImportBtn" class="btn" type="button" style="margin-top: 8px">Importar</button>
-        </div>
-        <div class="news-head">
-          <span>Novedades</span>
-          <button id="newsRefresh" class="btn icon" type="button" title="Buscar novedades">
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="23 4 23 10 17 10"/><path d="M20.49 15a9 9 0 1 1-2.12-9.36L23 10"/></svg>
-          </button>
-        </div>
-        <ul id="newsList" class="news-list"></ul>
-      </section>
-
-      <section class="panel">
-        <h2>Desde el móvil</h2>
+      <details class="panel" id="pn-movil">
+        <summary>Desde el móvil</summary>
         <p id="tgStatus" class="tip" style="margin: 0 0 10px"></p>
         <div id="tgForm" class="issue-row">
           <input id="tgToken" type="text" placeholder="Token de @BotFather"
             title="En Telegram: habla con @BotFather → /newbot → copia el token aquí. Después comparte artículos al bot desde X o Gmail y se añadirán al número actual (los mensajes esperan aunque el PC esté apagado)">
           <button id="tgSave" class="btn" type="button" style="width: auto; padding: 0 12px">Conectar</button>
         </div>
-      </section>
+      </details>
     </aside>
 
     <section id="previewWrap">
