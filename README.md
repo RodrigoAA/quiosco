@@ -29,13 +29,17 @@ abierto o cerrado.
 
 1. **Añadir artículos**: pega una URL y pulsa Añadir. El servidor descarga la
    página y extrae el artículo limpio con Readability (sin widgets de
-   suscripción, botones ni embeds). También puedes añadir en lote desde la
-   terminal: `node add.mjs <url1> <url2>…`
+   suscripción, botones ni embeds). Si el sitio rechaza peticiones de
+   servidores (429/403, challenges de Vercel/Cloudflare) o solo pinta el
+   contenido con JavaScript, se reintenta solo con un navegador headless.
+   En la lista, **arrastra desde el asa ⠿** para reordenar. También puedes
+   añadir en lote desde la terminal: `node add.mjs <url1> <url2>…`
 2. **Números**: cada revista vive en su propio número (`data/issues/issue-N.json`).
    El selector cambia entre números; ＋ crea el siguiente (hereda el diseño,
    empieza vacío); 🗑 elimina el actual.
 3. **Diseño** (por revista): color de acento (con paleta extraída de la imagen
-   de portada y cuentagotas 🎨), 5 tipografías empaquetadas, columnas 1–4,
+   de portada — se recalcula al cambiarla — y cuentagotas 🎨), 10 tipografías
+   empaquetadas, columnas 1–4,
    alineación, párrafos (sangría clásica o espaciado web), contraportada
    (raya o página completa de color) y acabado.
 4. **Por artículo** (✎): título, autor, entradilla, imagen destacada, columnas
@@ -109,6 +113,14 @@ nada especial. Nada llega al borde del papel salvo la contraportada en modo
 «área» (sin sangre: puede quedar un filo blanco según la máquina). Consejo:
 imprime una copia de prueba antes de encargar la tirada.
 
+### Prueba de tipografías en papel
+
+`node scripts/pruebas-tipografias.mjs "Título del artículo"` (con el servidor
+arrancado) genera en `Pruebas tipografias/` un PDF de **una página por cada
+una de las 10 tipografías** — la primera página del artículo indicado — para
+imprimirlas y comparar cómo quedan. La carpeta queda fuera del repo, como
+`data/` y `exports/` (es contenido con derechos).
+
 ## Arquitectura
 
 ```
@@ -116,8 +128,9 @@ server.js            Express: sirve el editor, extrae artículos
                      (Readability + jsdom, FxTwitter/ThreadReaderApp para X),
                      gestiona números (data/issues/ + data/state.json),
                      /add?url= (extensión) y /api/export-pdf
-exporter.js          PDF con Edge/Chrome headless vía CDP: espera a Paged.js
-                     y a las imágenes; Page.printToPDF en streaming
+exporter.js          Edge/Chrome headless vía CDP: exportPDF (espera a
+                     Paged.js y a las imágenes, streaming) y fetchPageHTML
+                     (fallback de extracción para sitios con anti-bot)
 public/index.html    Editor (header · top bar · sidebar · visor)
 public/app.js        Estado del editor, autoguardado, recortes, paleta, zoom/nav
 public/print.html/.js  Vista de impresión: compone la revista y la pagina
@@ -125,6 +138,7 @@ public/print.html/.js  Vista de impresión: compone la revista y la pagina
 public/magazine.css  LA MAQUETA de la revista (edítala para cambiar el diseño)
 public/fonts*        Tipografías woff2 empaquetadas (subset latin)
 extension/           Extensión Chrome MV3 «A Quiosco»
+scripts/             descargar-fuentes · sync-web · pruebas-tipografias
 docs/                Versión web estática (GitHub Pages)
 data/                Tus revistas (fuera del repo)
 exports/             PDFs generados (fuera del repo)
