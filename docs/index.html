@@ -26,12 +26,15 @@
   </div>
   <header id="topbar">
     <h1>Quiosco</h1>
-    <span id="status" class="status"></span>
     <div class="actions">
-      <button id="focusBtn" class="btn" type="button"
-        title="Oculta el editor para revisar la revista a pantalla completa (Esc para volver)">⛶ Vista completa</button>
-      <button id="printBtn" class="btn primary" type="button"
-        title="Imprime o guarda como PDF desde el navegador: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">Imprimir PDF</button>
+      <button id="focusBtn" class="btn icon" type="button"
+        title="Vista completa: oculta el editor para revisar la revista (Esc para volver)">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M8 3H5a2 2 0 0 0-2 2v3m18 0V5a2 2 0 0 0-2-2h-3m0 18h3a2 2 0 0 0 2-2v-3M3 16v3a2 2 0 0 0 2 2h3"/></svg>
+      </button>
+      <button id="printBtn" class="btn primary icon" type="button"
+        title="Imprimir / guardar como PDF desde el navegador: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">
+        <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+      </button>
     </div>
   </header>
 
@@ -124,16 +127,34 @@
 
     <section id="previewWrap">
       <div class="preview-tools">
-        <select id="zoom" title="Zoom de la previsualización">
-          <option value="50">50 %</option>
-          <option value="65" selected>65 %</option>
-          <option value="80">80 %</option>
-          <option value="100">100 %</option>
-        </select>
-        <button id="imgEditBtn" class="btn" type="button"
-          title="Modo edición: pulsa una imagen para quitarla, o selecciona texto para eliminar esos párrafos">✂ Recortar</button>
-        <button id="undoBtn" class="btn hidden" type="button" title="Deshacer el último recorte">↩ Deshacer</button>
-        <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto: se quitan al instante</span>
+        <span class="pt-left">
+          <button id="imgEditBtn" class="btn icon" type="button"
+            title="Recortar: pulsa una imagen para quitarla, o selecciona texto para eliminar esos párrafos">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
+          </button>
+          <button id="undoBtn" class="btn icon hidden" type="button" title="Deshacer el último recorte">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="1 4 1 10 7 10"/><path d="M3.51 15a9 9 0 1 0 2.13-9.36L1 10"/></svg>
+          </button>
+          <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto: se quitan al instante</span>
+        </span>
+        <span class="pt-center">
+          <span id="zoomBox" class="tb-group">
+            <button id="zoomOut" class="btn icon" type="button" title="Reducir">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+            <span id="zoomVal">65 %</span>
+            <button id="zoomIn" class="btn icon" type="button" title="Ampliar">
+              <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="12" y1="5" x2="12" y2="19"/><line x1="5" y1="12" x2="19" y2="12"/></svg>
+            </button>
+          </span>
+          <span id="navBox" class="tb-group hidden">
+            <input id="pageInput" type="number" min="1" value="1" title="Ir a la página…">
+            <span id="pageTotal">de ?</span>
+          </span>
+        </span>
+        <span class="pt-right">
+          <span id="status" class="status"></span>
+        </span>
       </div>
       <iframe id="preview" src="print.html" title="Previsualización de la revista"></iframe>
     </section>

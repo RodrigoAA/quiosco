@@ -57,7 +57,7 @@ body {
   text-align: right;
 }
 .status.error { color: #c0392b; font-weight: 600; }
-#topbar .actions { flex-shrink: 0; }
+#topbar .actions { margin-left: auto; }
 
 main {
   flex: 1;
@@ -148,6 +148,40 @@ input[type="color"] {
 }
 .btn.primary:hover { filter: brightness(1.08); }
 .btn:disabled { opacity: 0.55; cursor: default; }
+.btn.icon { padding: 6px 11px; }
+.ic {
+  width: 17px;
+  height: 17px;
+  display: block;
+}
+
+/* Navegación de páginas y zoom en el topbar */
+.tb-group {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
+}
+#pageInput {
+  width: 48px;
+  padding: 5px;
+  text-align: center;
+  font: inherit;
+  font-size: 13px;
+  border: 1px solid var(--line);
+  border-radius: 6px;
+  background: #fdfdfc;
+}
+#zoomOut, #zoomIn {
+  width: 27px;
+  height: 27px;
+  padding: 0;
+  font-size: 15px;
+  line-height: 1;
+}
+#zoomVal { min-width: 38px; text-align: center; }
 
 /* ---------- Añadir / lista de artículos ---------- */
 
@@ -157,14 +191,6 @@ input[type="color"] {
 .issue-row { display: flex; gap: 6px; }
 .issue-row select { flex: 1; margin: 0; }
 .issue-row .btn { padding: 7px 10px; }
-#bookmarklet { cursor: grab; }
-.bm-row {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  margin-top: 10px;
-}
-.bm-row .tip { margin: 0; }
 
 .palette-row {
   display: flex;
@@ -290,20 +316,20 @@ body.focus #focusExit { display: block; }
 .preview-tools {
   display: flex;
   align-items: center;
-  gap: 14px;
-  padding: 8px 14px;
+  gap: 10px;
+  padding: 7px 14px;
   background: #ffffff;
   border-bottom: 1px solid var(--line);
   font-size: 12px;
   color: var(--muted);
 }
-.preview-tools label {
+.pt-left, .pt-center, .pt-right {
   display: flex;
   align-items: center;
-  gap: 6px;
-  margin: 0;
+  gap: 8px;
 }
-.preview-tools select { width: auto; margin: 0; padding: 4px 6px; }
+.pt-center { margin: 0 auto; }
+.pt-right .status { margin-left: 0; }
 #preview {
   flex: 1;
   border: none;

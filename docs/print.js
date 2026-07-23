@@ -2,10 +2,6 @@
 
 const STORE_KEY = 'quiosco-magazine';
 
-const esc = s => String(s ?? '')
-  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
-  .replace(/"/g, '&quot;');
-
 function loadMag() {
   try {
     const stored = JSON.parse(localStorage.getItem(STORE_KEY));
@@ -13,6 +9,10 @@ function loadMag() {
   } catch { /* corrupto */ }
   return { settings: { title: 'Mi Revista', issue: 'Nº 1', accent: '#b3402a' }, articles: [] };
 }
+
+const esc = s => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
+  .replace(/"/g, '&quot;');
 
 function hostFromUrl(url) {
   try { return new URL(url).hostname.replace(/^www\./, ''); } catch { return ''; }
@@ -25,6 +25,7 @@ function formatDate(iso) {
   return d.toLocaleDateString('es-ES', { day: 'numeric', month: 'long', year: 'numeric' });
 }
 
+// Evita repetir la imagen destacada si ya aparece al principio del contenido
 function contentStartsWithImage(html) {
   const head = html.slice(0, 600).replace(/\s+/g, ' ');
   return /^(\s*<(figure|p|div)[^>]*>)*\s*<img/i.test(head) || /<img[^>]*>/i.test(head.slice(0, 300));
@@ -124,18 +125,87 @@ async function pruneBrokenImages(root, timeoutMs = 15000) {
   return removed;
 }
 
-// Modo «quitar imágenes»: lo activa el editor (iframe padre) por postMessage
+// Modo «quitar imágenes»: lo activa el editor (iframe padre) por postMessage.
+// Al pulsar una imagen de un artículo, se pide confirmación y se avisa al
+// padre, que es quien edita y guarda el contenido.
+// Navegación de páginas: «N de M» con salto y scroll-spy. La toolbar flotante
+// la usa en vista completa; en el editor la maneja el topbar (por mensajes).
+let pageGoTo = null;
+
+function initPageNav(total, note) {
+  const nav = document.getElementById('tb-nav');
+  const input = document.getElementById('tb-page');
+  document.getElementById('tb-total').textContent = `de ${total}`;
+  input.max = total;
+  input.value = 1;
+  nav.classList.remove('hidden');
+
+  const pages = [...document.querySelectorAll('.pagedjs_page')];
+  const goTo = n => {
+    const p = pages[Math.min(total, Math.max(1, n)) - 1];
+    if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  pageGoTo = goTo;
+  if (window.parent !== window) {
+    window.parent.postMessage({ quiosco: 'pages', total, note: note || '' }, '*');
+  }
+  input.addEventListener('change', () => goTo(parseInt(input.value, 10) || 1));
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      goTo(parseInt(input.value, 10) || 1);
+      input.blur();
+    }
+  });
+
+  let ticking = false;
+  let lastSent = 1;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const mark = window.scrollY + window.innerHeight / 3;
+      let current = 1;
+      for (let i = 0; i < pages.length; i++) {
+        if (pages[i].offsetTop <= mark) current = i + 1;
+        else break;
+      }
+      if (document.activeElement !== input) input.value = current;
+      if (current !== lastSent && window.parent !== window) {
+        lastSent = current;
+        window.parent.postMessage({ quiosco: 'page-current', current }, '*');
+      }
+    });
+  }, { passive: true });
+}
+
 function initImageEditMode() {
-  if (window.parent === window) return;
+  if (window.parent === window) return; // solo tiene sentido embebido en el editor
   document.body.classList.add('embedded');
 
+  // Zoom −/+: el zoom lo aplica el editor (padre); desde aquí solo se pide
+  document.getElementById('tb-zoom').classList.remove('hidden');
+  document.getElementById('tb-zoomout').addEventListener('click', () =>
+    window.parent.postMessage({ quiosco: 'zoom-delta', delta: -10 }, '*'));
+  document.getElementById('tb-zoomin').addEventListener('click', () =>
+    window.parent.postMessage({ quiosco: 'zoom-delta', delta: 10 }, '*'));
+
   window.addEventListener('message', ev => {
+    if (ev.data && ev.data.quiosco === 'goto' && pageGoTo) {
+      pageGoTo(Number(ev.data.page) || 1);
+    }
     if (ev.data && ev.data.quiosco === 'view') {
+      const wasEditing = document.body.classList.contains('img-edit');
       document.body.classList.toggle('img-edit', !!ev.data.imgEdit);
+      if (!wasEditing && ev.data.imgEdit) {
+        try { window.getSelection().removeAllRanges(); } catch { /* sin selección */ }
+      }
       document.body.classList.toggle('focusfull', !!ev.data.focus);
       // La toolbar mini no debe encogerse con el zoom de la previsualización
       const z = Number(ev.data.zoom);
       document.getElementById('toolbar').style.zoom = z > 0 ? String(1 / z) : '';
+      document.getElementById('tb-zoomval').textContent = z > 0 ? `${Math.round(z * 100)} %` : '';
     }
   });
 
@@ -149,7 +219,7 @@ function initImageEditMode() {
     const img = ev.target.closest('img');
     if (!img) return;
     const article = img.closest('.article');
-    if (!article) return;
+    if (!article) return; // portada y contraportada se editan en Ajustes
     ev.preventDefault();
     const artIndex = parseInt(article.dataset.art ?? (article.id || '').replace('art-', ''), 10);
     if (isNaN(artIndex)) return;
@@ -161,12 +231,22 @@ function initImageEditMode() {
     }, '*');
   });
 
-  // Selección de texto → quitar los bloques (párrafos, títulos…) tocados
+  // Selección de texto → quitar los bloques (párrafos, títulos…) tocados.
+  // Guardias: solo actúa si ESTE gesto creó la selección (nunca selecciones
+  // heredadas) y nunca cuando el gesto acaba sobre una imagen (eso es quitar-imagen).
   const BLOCK_SEL = '.pagedjs_page .article :is(p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, figcaption)';
-  document.addEventListener('mouseup', () => {
+  let selAtMouseDown = '';
+  document.addEventListener('mousedown', () => {
     if (!document.body.classList.contains('img-edit')) return;
+    selAtMouseDown = String(window.getSelection() || '');
+  });
+  document.addEventListener('mouseup', ev => {
+    if (!document.body.classList.contains('img-edit')) return;
+    if (ev.target && ev.target.closest && ev.target.closest('img')) return;
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const selText = String(sel);
+    if (selText.replace(/\s+/g, ' ').trim().length < 3 || selText === selAtMouseDown) return;
     const range = sel.getRangeAt(0);
     const startEl = range.startContainer.nodeType === 1
       ? range.startContainer : range.startContainer.parentElement;
@@ -182,6 +262,7 @@ function initImageEditMode() {
           && el.textContent.trim().length > 0;
       } catch { return false; }
     });
+    // Solo bloques de nivel superior (si cae un blockquote entero, no sus <p> internos)
     const blocks = candidates.filter(el => !candidates.some(o => o !== el && o.contains(el)));
     if (!blocks.length) return;
 
@@ -204,9 +285,10 @@ async function main() {
   const s = mag.settings;
   const arts = mag.articles.filter(a => a.included !== false);
 
-  document.title = `${s.title} — ${s.issue || ''}`;
+  document.title = `${s.title} — ${s.issue}`;
   document.documentElement.style.setProperty('--accent', s.accent || '#b3402a');
 
+  // Tipografía y columnas (con ?font=…&cols=… en la URL para probar sin guardar)
   const qp = new URLSearchParams(location.search);
   const FONT_ALIASES = { serif: 'clasica', sans: 'moderna' };
   let font = qp.get('font') || s.font || 'clasica';
@@ -230,6 +312,7 @@ async function main() {
     + arts.map((a, i) => articleHTML(a, i, globalCols)).join('')
     + (saddle ? backcoverHTML(s, arts, backstyle) : '');
 
+  // Las fuentes deben estar cargadas ANTES de que Paged.js mida el texto
   const FONT_FAMILIES = {
     editorial: ['700 1em "Playfair Display"', '800 1em "Playfair Display"', '1em Lora', 'italic 1em Lora', '700 1em Lora'],
     elegante: ['700 1em "Cormorant Garamond"', '1em "EB Garamond"', 'italic 1em "EB Garamond"', '700 1em "EB Garamond"'],
@@ -246,7 +329,8 @@ async function main() {
   if (removedImgs) console.warn(`Se quitaron ${removedImgs} imágenes rotas o que no respondían`);
   status.textContent = 'Maquetando…';
 
-  // Marcar primer y último párrafo de cada artículo (capitular y remate)
+  // Marcar primer y último párrafo de cada artículo (capitular y remate).
+  // A cualquier profundidad: Readability envuelve el contenido en divs.
   content.querySelectorAll('.article-body').forEach(body => {
     const ps = [...body.querySelectorAll('p')]
       .filter(p => p.textContent.trim().length > 0 && !p.closest('blockquote, figure, figcaption'));
@@ -280,9 +364,9 @@ async function main() {
       }
     }
 
-    status.textContent = `${result.total} páginas` +
-      (saddle ? ' (múltiplo de 4 ✓)' : '') +
-      (removedImgs ? ` · ${removedImgs} imagen(es) rota(s) omitida(s)` : '');
+    status.textContent = removedImgs ? `${removedImgs} img rota(s) fuera` : '';
+    status.title = `${result.total} páginas` + (saddle ? ' · múltiplo de 4 ✓' : '');
+    initPageNav(result.total, removedImgs ? `${removedImgs} imagen(es) rota(s) omitida(s)` : '');
     printBtn.disabled = false;
     window.__pagedStatus = { done: true, pages: result.total };
   } catch (e) {

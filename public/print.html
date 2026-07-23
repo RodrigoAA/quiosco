@@ -38,30 +38,53 @@
       max-width: calc(100vw - 28px);
     }
     #tb-status { font-weight: 600; white-space: nowrap; }
+    #tb-nav, #tb-zoom {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+      white-space: nowrap;
+    }
+    #tb-nav.hidden, #tb-zoom.hidden { display: none; }
+    #tb-page {
+      width: 46px;
+      padding: 4px 5px;
+      font: inherit;
+      text-align: center;
+      border: 1px solid #cccccc;
+      border-radius: 5px;
+    }
+    #tb-zoomout, #tb-zoomin {
+      border: 1px solid #cccccc;
+      background: #ffffff;
+      width: 26px;
+      height: 26px;
+      border-radius: 5px;
+      font-size: 15px;
+      cursor: pointer;
+      line-height: 1;
+    }
+    #tb-zoomval { min-width: 40px; text-align: center; color: #555555; }
+    .ic { width: 17px; height: 17px; display: block; }
     #tb-download {
       border: none;
       background: #b3402a;
       color: #ffffff;
-      font-weight: 600;
-      font-size: 13px;
-      padding: 7px 14px;
+      padding: 6px 11px;
       border-radius: 6px;
       cursor: pointer;
-      white-space: nowrap;
     }
     #tb-download:disabled { background: #b9b9b9; cursor: default; }
     #tb-print {
       border: 1px solid #cccccc;
       background: #ffffff;
       color: #333333;
-      font-weight: 600;
-      font-size: 13px;
-      padding: 6px 12px;
+      padding: 5px 11px;
       border-radius: 6px;
       cursor: pointer;
-      white-space: nowrap;
     }
     #tb-print:disabled { color: #b9b9b9; cursor: default; }
+    /* Sin editor padre no hay control de zoom */
+    body:not(.embedded) #tb-zoom { display: none; }
     #tb-hint { color: #777777; font-size: 11px; line-height: 1.3; }
     #empty {
       font-family: 'Segoe UI', Arial, sans-serif;
@@ -71,16 +94,9 @@
       font-size: 15px;
     }
   }
-  /* Embebido en el editor: solo el contador (los botones ya están arriba).
-     En vista completa (focusfull) se muestra la toolbar entera. */
-  body.embedded:not(.focusfull) #toolbar {
-    padding: 5px 10px;
-    font-size: 11px;
-    gap: 0;
-    opacity: 0.92;
-  }
-  body.embedded:not(.focusfull) #tb-download,
-  body.embedded:not(.focusfull) #tb-print { display: none; }
+  /* Embebido en el editor la toolbar sobra (todo está en el topbar);
+     en vista completa (focusfull) se muestra entera. */
+  body.embedded:not(.focusfull) #toolbar { display: none; }
 
   /* Modo «quitar imágenes» (activado desde el editor) */
   body.img-edit .pagedjs_page .article img {
@@ -101,10 +117,23 @@
 <body>
   <div id="toolbar">
     <span id="tb-status">Maquetando…</span>
+    <span id="tb-nav" class="hidden">
+      <input id="tb-page" type="number" min="1" value="1" title="Ir a la página…">
+      <span id="tb-total">de ?</span>
+    </span>
+    <span id="tb-zoom" class="hidden">
+      <button id="tb-zoomout" title="Reducir">−</button>
+      <span id="tb-zoomval"></span>
+      <button id="tb-zoomin" title="Ampliar">+</button>
+    </span>
     <button id="tb-download"
-      title="Genera el PDF en el servidor (fiable) y abre el Explorador con el archivo">Descargar PDF</button>
+      title="Descargar PDF — motor del servidor (copia maestra en exports)">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+    </button>
     <button id="tb-print" disabled
-      title="Diálogo del navegador, solo para impresora física: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">Imprimir PDF</button>
+      title="Imprimir PDF — impresora física: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">
+      <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="6 9 6 2 18 2 18 9"/><path d="M6 18H4a2 2 0 0 1-2-2v-5a2 2 0 0 1 2-2h16a2 2 0 0 1 2 2v5a2 2 0 0 1-2 2h-2"/><rect x="6" y="14" width="12" height="8"/></svg>
+    </button>
   </div>
   <div id="pages"></div>
   <script type="module" src="/print.js"></script>

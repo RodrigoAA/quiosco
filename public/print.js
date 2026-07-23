@@ -118,17 +118,84 @@ async function pruneBrokenImages(root, timeoutMs = 15000) {
 // Modo «quitar imágenes»: lo activa el editor (iframe padre) por postMessage.
 // Al pulsar una imagen de un artículo, se pide confirmación y se avisa al
 // padre, que es quien edita y guarda el contenido.
+// Navegación de páginas: «N de M» con salto y scroll-spy. La toolbar flotante
+// la usa en vista completa; en el editor la maneja el topbar (por mensajes).
+let pageGoTo = null;
+
+function initPageNav(total, note) {
+  const nav = document.getElementById('tb-nav');
+  const input = document.getElementById('tb-page');
+  document.getElementById('tb-total').textContent = `de ${total}`;
+  input.max = total;
+  input.value = 1;
+  nav.classList.remove('hidden');
+
+  const pages = [...document.querySelectorAll('.pagedjs_page')];
+  const goTo = n => {
+    const p = pages[Math.min(total, Math.max(1, n)) - 1];
+    if (p) p.scrollIntoView({ behavior: 'smooth', block: 'start' });
+  };
+  pageGoTo = goTo;
+  if (window.parent !== window) {
+    window.parent.postMessage({ quiosco: 'pages', total, note: note || '' }, '*');
+  }
+  input.addEventListener('change', () => goTo(parseInt(input.value, 10) || 1));
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      goTo(parseInt(input.value, 10) || 1);
+      input.blur();
+    }
+  });
+
+  let ticking = false;
+  let lastSent = 1;
+  window.addEventListener('scroll', () => {
+    if (ticking) return;
+    ticking = true;
+    requestAnimationFrame(() => {
+      ticking = false;
+      const mark = window.scrollY + window.innerHeight / 3;
+      let current = 1;
+      for (let i = 0; i < pages.length; i++) {
+        if (pages[i].offsetTop <= mark) current = i + 1;
+        else break;
+      }
+      if (document.activeElement !== input) input.value = current;
+      if (current !== lastSent && window.parent !== window) {
+        lastSent = current;
+        window.parent.postMessage({ quiosco: 'page-current', current }, '*');
+      }
+    });
+  }, { passive: true });
+}
+
 function initImageEditMode() {
   if (window.parent === window) return; // solo tiene sentido embebido en el editor
   document.body.classList.add('embedded');
 
+  // Zoom −/+: el zoom lo aplica el editor (padre); desde aquí solo se pide
+  document.getElementById('tb-zoom').classList.remove('hidden');
+  document.getElementById('tb-zoomout').addEventListener('click', () =>
+    window.parent.postMessage({ quiosco: 'zoom-delta', delta: -10 }, '*'));
+  document.getElementById('tb-zoomin').addEventListener('click', () =>
+    window.parent.postMessage({ quiosco: 'zoom-delta', delta: 10 }, '*'));
+
   window.addEventListener('message', ev => {
+    if (ev.data && ev.data.quiosco === 'goto' && pageGoTo) {
+      pageGoTo(Number(ev.data.page) || 1);
+    }
     if (ev.data && ev.data.quiosco === 'view') {
+      const wasEditing = document.body.classList.contains('img-edit');
       document.body.classList.toggle('img-edit', !!ev.data.imgEdit);
+      if (!wasEditing && ev.data.imgEdit) {
+        try { window.getSelection().removeAllRanges(); } catch { /* sin selección */ }
+      }
       document.body.classList.toggle('focusfull', !!ev.data.focus);
       // La toolbar mini no debe encogerse con el zoom de la previsualización
       const z = Number(ev.data.zoom);
       document.getElementById('toolbar').style.zoom = z > 0 ? String(1 / z) : '';
+      document.getElementById('tb-zoomval').textContent = z > 0 ? `${Math.round(z * 100)} %` : '';
     }
   });
 
@@ -154,12 +221,22 @@ function initImageEditMode() {
     }, '*');
   });
 
-  // Selección de texto → quitar los bloques (párrafos, títulos…) tocados
+  // Selección de texto → quitar los bloques (párrafos, títulos…) tocados.
+  // Guardias: solo actúa si ESTE gesto creó la selección (nunca selecciones
+  // heredadas) y nunca cuando el gesto acaba sobre una imagen (eso es quitar-imagen).
   const BLOCK_SEL = '.pagedjs_page .article :is(p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, figcaption)';
-  document.addEventListener('mouseup', () => {
+  let selAtMouseDown = '';
+  document.addEventListener('mousedown', () => {
     if (!document.body.classList.contains('img-edit')) return;
+    selAtMouseDown = String(window.getSelection() || '');
+  });
+  document.addEventListener('mouseup', ev => {
+    if (!document.body.classList.contains('img-edit')) return;
+    if (ev.target && ev.target.closest && ev.target.closest('img')) return;
     const sel = window.getSelection();
     if (!sel || sel.isCollapsed || !sel.rangeCount) return;
+    const selText = String(sel);
+    if (selText.replace(/\s+/g, ' ').trim().length < 3 || selText === selAtMouseDown) return;
     const range = sel.getRangeAt(0);
     const startEl = range.startContainer.nodeType === 1
       ? range.startContainer : range.startContainer.parentElement;
@@ -299,9 +376,9 @@ async function main() {
       }
     }
 
-    status.textContent = `${result.total} páginas` +
-      (saddle ? ' (múltiplo de 4 ✓)' : '') +
-      (removedImgs ? ` · ${removedImgs} imagen(es) rota(s) omitida(s)` : '');
+    status.textContent = removedImgs ? `${removedImgs} img rota(s) fuera` : '';
+    status.title = `${result.total} páginas` + (saddle ? ' · múltiplo de 4 ✓' : '');
+    initPageNav(result.total, removedImgs ? `${removedImgs} imagen(es) rota(s) omitida(s)` : '');
     printBtn.disabled = false;
     window.__pagedStatus = { done: true, pages: result.total };
   } catch (e) {

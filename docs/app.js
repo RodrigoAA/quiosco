@@ -211,13 +211,6 @@ function bindAddForm() {
 /* ---------- Previsualización ---------- */
 
 function bindPreviewTools() {
-  const frame = $('#preview');
-  const zoom = $('#zoom');
-  const applyZoom = () => {
-    frame.style.zoom = Number(zoom.value) / 100;
-    syncPreviewState();
-  };
-  zoom.addEventListener('change', applyZoom);
   applyZoom();
 }
 
@@ -233,6 +226,8 @@ function pushUndo(article) {
 }
 
 let focusOn = false;
+let zoomLevel = 65;
+let zoomBeforeFocus = 65;
 
 function syncPreviewState() {
   try {
@@ -240,9 +235,55 @@ function syncPreviewState() {
       quiosco: 'view',
       imgEdit: imgEditOn,
       focus: focusOn,
-      zoom: focusOn ? 1 : Number($('#zoom').value) / 100
+      zoom: zoomLevel / 100
     }, '*');
   } catch { /* iframe aún cargando */ }
+}
+
+function applyZoom() {
+  $('#preview').style.zoom = zoomLevel / 100;
+  $('#zoomVal').textContent = `${zoomLevel} %`;
+  syncPreviewState();
+}
+
+function changeZoom(delta) {
+  zoomLevel = Math.min(150, Math.max(40, zoomLevel + delta));
+  applyZoom();
+}
+
+/* Navegación de páginas: el iframe informa (pages/page-current), el topbar manda (goto) */
+function bindTopNav() {
+  const input = $('#pageInput');
+  const goTo = () => {
+    try {
+      $('#preview').contentWindow.postMessage({ quiosco: 'goto', page: parseInt(input.value, 10) || 1 }, '*');
+    } catch { /* iframe cargando */ }
+  };
+  input.addEventListener('change', goTo);
+  input.addEventListener('keydown', ev => {
+    if (ev.key === 'Enter') {
+      ev.preventDefault();
+      goTo();
+      input.blur();
+    }
+  });
+  $('#zoomOut').addEventListener('click', () => changeZoom(-10));
+  $('#zoomIn').addEventListener('click', () => changeZoom(10));
+
+  window.addEventListener('message', ev => {
+    const d = ev.data;
+    if (!d) return;
+    if (d.quiosco === 'pages') {
+      $('#pageTotal').textContent = `de ${d.total}`;
+      input.max = d.total;
+      if (parseInt(input.value, 10) > d.total) input.value = 1;
+      $('#navBox').classList.remove('hidden');
+      if (d.note) status(d.note);
+    }
+    if (d.quiosco === 'page-current' && document.activeElement !== input) {
+      input.value = d.current;
+    }
+  });
 }
 
 function initImageRemoval() {
@@ -423,8 +464,13 @@ async function initPalette() {
 function setFocusMode(on) {
   focusOn = on;
   document.body.classList.toggle('focus', on);
-  $('#preview').style.zoom = on ? 1 : Number($('#zoom').value) / 100;
-  syncPreviewState();
+  if (on) {
+    zoomBeforeFocus = zoomLevel;
+    zoomLevel = 100;
+  } else {
+    zoomLevel = zoomBeforeFocus;
+  }
+  applyZoom();
 }
 
 function bindFocusMode() {
@@ -433,8 +479,12 @@ function bindFocusMode() {
   window.addEventListener('keydown', ev => {
     if (ev.key === 'Escape' && focusOn) setFocusMode(false);
   });
+  // Mensajes desde el iframe: salir de vista completa y zoom −/+
   window.addEventListener('message', ev => {
-    if (ev.data && ev.data.quiosco === 'exit-focus' && focusOn) setFocusMode(false);
+    const d = ev.data;
+    if (!d) return;
+    if (d.quiosco === 'exit-focus' && focusOn) setFocusMode(false);
+    if (d.quiosco === 'zoom-delta') changeZoom(Number(d.delta) || 0);
   });
 }
 
@@ -504,9 +554,9 @@ function init() {
   bindJsonTools();
   bindPrint();
   bindFocusMode();
+  bindTopNav();
   initImageRemoval();
   initPalette();
-  status('Listo');
 }
 
 init();
