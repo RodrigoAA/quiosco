@@ -56,8 +56,8 @@ npm start     # abre http://localhost:4321
    Todo se guarda solo (en `data/magazine.json`, con copia en
    `magazine.backup.json`).
 4. **Exportar PDF** (botón del editor, o «Descargar PDF» en la vista de
-   impresión) genera el PDF en el servidor, lo guarda en `quiosco/exports/`
-   y abre el Explorador con el archivo seleccionado. Es LA vía para obtener
+   impresión) genera el PDF en el servidor, lo descarga automáticamente y
+   guarda la copia maestra en `quiosco/exports/`. Es LA vía para obtener
    el PDF: no depende del diálogo de imprimir del navegador, que con
    revistas grandes falla (PDFs corruptos o de 0 bytes, sobre todo con el
    driver «Microsoft Print to PDF» o desde el navegador integrado de

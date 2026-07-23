@@ -203,12 +203,11 @@ async function main() {
       const r = await fetch('/api/export-pdf', { method: 'POST' });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Error desconocido');
-      await fetch('/api/show-export', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: data.name })
-      }).catch(() => { });
-      status.textContent = `PDF listo: ${data.name} (${data.kb} KB)`;
+      const a = document.createElement('a');
+      a.href = data.url;
+      a.download = data.name;
+      a.click(); // descarga automática al terminar
+      status.textContent = `PDF descargado: ${data.name} (${data.kb} KB)`;
     } catch (e) {
       status.textContent = 'Error al exportar: ' + e.message;
     } finally {

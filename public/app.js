@@ -443,18 +443,13 @@ function bindExport() {
       const r = await fetch('/api/export-pdf', { method: 'POST' });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Error desconocido');
-      status(`PDF listo (${data.kb} KB) — guardado en quiosco\\exports`);
+      status(`PDF listo (${data.kb} KB) — descargado; copia maestra en quiosco\\exports`);
       const link = $('#exportLink');
       link.href = data.url;
       link.download = data.name;
-      link.textContent = 'Descargar PDF';
+      link.textContent = 'Volver a descargar';
       link.classList.remove('hidden');
-      // Abrir el Explorador con el archivo seleccionado (la vía que nunca falla)
-      fetch('/api/show-export', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify({ name: data.name })
-      }).catch(() => { });
+      link.click(); // descarga automática al terminar
     } catch (e) {
       status('Error al exportar: ' + e.message, true);
     } finally {
