@@ -1,0 +1,386 @@
+import express from 'express';
+import { spawn } from 'node:child_process';
+import path from 'node:path';
+import fs from 'node:fs/promises';
+import { fileURLToPath } from 'node:url';
+import { JSDOM, VirtualConsole } from 'jsdom';
+import { Readability } from '@mozilla/readability';
+import { exportPDF } from './exporter.js';
+
+const __dirname = path.dirname(fileURLToPath(import.meta.url));
+const DATA_DIR = path.join(__dirname, 'data');
+const DATA_FILE = path.join(DATA_DIR, 'magazine.json');
+const PORT = process.env.PORT || 4321;
+
+const app = express();
+app.use(express.json({ limit: '25mb' }));
+app.use(express.static(path.join(__dirname, 'public')));
+app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'pagedjs', 'dist')));
+app.use('/exports', express.static(path.join(__dirname, 'exports')));
+
+const DEFAULT_MAGAZINE = {
+  settings: {
+    title: 'Mi Revista',
+    subtitle: 'Selección de lecturas',
+    issue: 'Nº 1',
+    date: '',
+    accent: '#b3402a',
+    font: 'clasica',
+    columns: '2',
+    coverImage: ''
+  },
+  articles: []
+};
+
+async function loadMagazine() {
+  try {
+    return JSON.parse(await fs.readFile(DATA_FILE, 'utf8'));
+  } catch {
+    return structuredClone(DEFAULT_MAGAZINE);
+  }
+}
+
+async function saveMagazine(mag) {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  try {
+    await fs.copyFile(DATA_FILE, path.join(DATA_DIR, 'magazine.backup.json'));
+  } catch { /* primera vez: no hay nada que respaldar */ }
+  await fs.writeFile(DATA_FILE, JSON.stringify(mag, null, 2), 'utf8');
+}
+
+app.get('/api/magazine', async (_req, res) => {
+  res.json(await loadMagazine());
+});
+
+app.put('/api/magazine', async (req, res) => {
+  const mag = req.body;
+  if (!mag || typeof mag !== 'object' || !mag.settings || !Array.isArray(mag.articles)) {
+    return res.status(400).json({ error: 'Formato de revista no válido' });
+  }
+  await saveMagazine(mag);
+  res.json({ ok: true });
+});
+
+app.post('/api/extract', async (req, res) => {
+  const { url } = req.body || {};
+  if (!url || !/^https?:\/\//i.test(url)) {
+    return res.status(400).json({ error: 'URL no válida (debe empezar por http:// o https://)' });
+  }
+
+  // Posts e hilos de X van por otra vía: x.com no sirve HTML a servidores
+  const statusId = parseXStatus(url);
+  if (statusId) {
+    try {
+      return res.json(await extractXThread(statusId, url));
+    } catch (e) {
+      return res.status(502).json({ error: e.message });
+    }
+  }
+
+  try {
+    const r = await fetch(url, {
+      redirect: 'follow',
+      signal: AbortSignal.timeout(25000),
+      headers: {
+        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+        'accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
+        'accept-language': 'es,en;q=0.8'
+      }
+    });
+    if (!r.ok) return res.status(502).json({ error: `El sitio respondió con error ${r.status}` });
+    const html = await r.text();
+    const article = extractArticle(html, r.url || url);
+    if (!article) return res.status(422).json({ error: 'No se pudo extraer el artículo de esa página' });
+    res.json(article);
+  } catch (e) {
+    const msg = e.name === 'TimeoutError' ? 'El sitio tardó demasiado en responder' : e.message;
+    res.status(500).json({ error: msg });
+  }
+});
+
+// Elementos que no pintan nada en una revista impresa (widgets de suscripción,
+// botones de compartir, players…). Readability quita la mayoría; esto es la escoba fina.
+const STRIP_SELECTORS = [
+  'script', 'style', 'noscript', 'form', 'button', 'input', 'select', 'textarea',
+  'iframe', 'audio', 'video', 'source',
+  '.subscription-widget-wrap', '.subscription-widget', '.subscribe-widget',
+  '.subscribe-footer', '.subscribe-dialog', '[data-component-name*="Subscribe" i]',
+  '.button-wrapper', '.paywall', '.paywall-jump', '.share-dialog',
+  '[class*="share-button" i]', '.post-footer', '.publication-footer', '.footer-wrap',
+  '.image-link-expand', '.poll-embed', '.digest-post-embed', '.install-substack-app'
+];
+
+const normalize = s => (s || '').toLowerCase().replace(/\s+/g, ' ').trim();
+
+function extractArticle(html, url) {
+  const virtualConsole = new VirtualConsole(); // silencia errores de CSS de jsdom
+  const dom = new JSDOM(html, { url, virtualConsole });
+  const doc = dom.window.document;
+  const meta = sel => doc.querySelector(sel)?.getAttribute('content')?.trim() || '';
+
+  const lang = (doc.documentElement.getAttribute('lang') || '').slice(0, 2);
+  const leadImage = meta('meta[property="og:image"]') || meta('meta[name="twitter:image"]');
+  const ogSiteName = meta('meta[property="og:site_name"]');
+  const published = meta('meta[property="article:published_time"]');
+
+  const parsed = new Readability(doc, { keepClasses: false }).parse();
+  if (!parsed || !parsed.content) return null;
+
+  const cdom = new JSDOM(`<body>${parsed.content}</body>`, { url, virtualConsole });
+  const cdoc = cdom.window.document;
+
+  for (const sel of STRIP_SELECTORS) {
+    try { cdoc.querySelectorAll(sel).forEach(n => n.remove()); } catch { /* selector no soportado */ }
+  }
+
+  // Desenvolver enlaces que solo contienen una imagen (típico de Substack)
+  cdoc.querySelectorAll('a').forEach(a => {
+    if (a.querySelector('img') && !a.textContent.trim()) a.replaceWith(...a.childNodes);
+  });
+
+  // URLs absolutas y limpieza de atributos de tamaño
+  cdoc.querySelectorAll('img').forEach(img => {
+    const src = img.getAttribute('src');
+    if (!src) return img.remove();
+    try { img.setAttribute('src', new URL(src, url).href); } catch { /* src raro, se deja */ }
+    img.removeAttribute('srcset');
+    img.removeAttribute('sizes');
+    img.removeAttribute('width');
+    img.removeAttribute('height');
+  });
+  cdoc.querySelectorAll('a[href]').forEach(a => {
+    try { a.setAttribute('href', new URL(a.getAttribute('href'), url).href); } catch { /* href raro */ }
+  });
+
+  // Título repetido al principio del cuerpo
+  const firstHeading = cdoc.body.querySelector('h1, h2');
+  if (firstHeading && normalize(firstHeading.textContent) === normalize(parsed.title)) {
+    firstHeading.remove();
+  }
+
+  // Figuras que se quedaron vacías tras la limpieza
+  cdoc.querySelectorAll('figure').forEach(f => {
+    if (!f.querySelector('img, blockquote') && !f.textContent.trim()) f.remove();
+  });
+
+  const words = cdoc.body.textContent.split(/\s+/).filter(Boolean).length;
+
+  // Byline: "Posted on July 30, 2014 by Scott Alexander" → "Scott Alexander"
+  let byline = (parsed.byline || meta('meta[name="author"]') || '').replace(/\s+/g, ' ').trim();
+  const byMatch = byline.match(/\bby\s+(.+)$/i);
+  if (byMatch) byline = byMatch[1];
+  if (/^(posted|published|publicado|escrito)\b/i.test(byline)) byline = '';
+  byline = byline.replace(/^(by|por)\s+/i, '').trim();
+
+  // Entradillas vacías tipo "…" no aportan nada
+  let excerpt = (parsed.excerpt || '').replace(/\s+/g, ' ').trim().slice(0, 300);
+  if (/^[.…\s·—-]*$/.test(excerpt)) excerpt = '';
+  // …ni las que solo repiten el primer párrafo del artículo
+  const squash = s => normalize(s).replace(/\s+/g, '');
+  if (excerpt && squash(cdoc.body.textContent).startsWith(squash(excerpt).replace(/[.…]+$/, '').slice(0, 150))) {
+    excerpt = '';
+  }
+
+  let siteName = parsed.siteName || ogSiteName;
+  if (!siteName) {
+    try { siteName = new URL(url).hostname.replace(/^www\./, ''); } catch { siteName = ''; }
+  }
+
+  return {
+    url,
+    title: (parsed.title || doc.title || 'Sin título').trim(),
+    byline,
+    siteName,
+    excerpt,
+    leadImage,
+    publishedTime: parsed.publishedTime || published || '',
+    lang,
+    minutes: Math.max(1, Math.round(words / 220)),
+    words,
+    content: cdoc.body.innerHTML
+  };
+}
+
+app.post('/api/export-pdf', async (_req, res) => {
+  try {
+    const mag = await loadMagazine();
+    const safe = s => (s || '').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
+    const name = `${safe(mag.settings.title) || 'Revista'} — ${safe(mag.settings.issue) || 'sin número'}.pdf`;
+    const dir = path.join(__dirname, 'exports');
+    await fs.mkdir(dir, { recursive: true });
+    const file = path.join(dir, name);
+
+    await exportPDF(`http://localhost:${PORT}/print.html`, file);
+
+    const size = (await fs.stat(file)).size;
+    if (size < 1000) throw new Error('El PDF salió vacío; revisa la vista de impresión');
+    res.json({ ok: true, name, url: '/exports/' + encodeURIComponent(name), path: file, kb: Math.round(size / 1024) });
+  } catch (e) {
+    res.status(500).json({ error: e.message });
+  }
+});
+
+// Abre el Explorador de Windows con el PDF exportado seleccionado
+app.post('/api/show-export', async (req, res) => {
+  const { name } = req.body || {};
+  const file = path.join(__dirname, 'exports', path.basename(name || ''));
+  try {
+    await fs.access(file);
+  } catch {
+    return res.status(404).json({ error: 'No existe ese PDF en exports/' });
+  }
+  spawn('explorer', ['/select,', file], { detached: true, stdio: 'ignore' }).unref();
+  res.json({ ok: true });
+});
+
+/* ================= Posts e hilos de X (Twitter) =================
+   x.com es una SPA: el HTML llega vacío a un servidor. Usamos dos vías
+   públicas: la API de FxTwitter (texto completo, fotos, autor, cadena de
+   respuestas) y ThreadReaderApp (hilos ya desenrollados). */
+
+const UA = 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36';
+const X_HOSTS = new Set([
+  'x.com', 'www.x.com', 'twitter.com', 'www.twitter.com',
+  'mobile.twitter.com', 'mobile.x.com', 'fxtwitter.com', 'vxtwitter.com', 'fixupx.com'
+]);
+
+const esc = s => String(s ?? '')
+  .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+
+function parseXStatus(url) {
+  try {
+    const u = new URL(url);
+    if (!X_HOSTS.has(u.hostname)) return null;
+    const m = u.pathname.match(/\/status(?:es)?\/(\d+)/);
+    return m ? m[1] : null;
+  } catch {
+    return null;
+  }
+}
+
+async function fetchFxTweet(id) {
+  const r = await fetch(`https://api.fxtwitter.com/i/status/${id}`, {
+    headers: { 'user-agent': UA },
+    signal: AbortSignal.timeout(15000)
+  });
+  if (!r.ok) return null;
+  const j = await r.json().catch(() => null);
+  return j && j.code === 200 && j.tweet ? j.tweet : null;
+}
+
+// Titular a partir de la primera frase del post
+function deriveTitle(text, author) {
+  const clean = (text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
+  if (!clean) return `Publicado por ${author}`;
+  const m = clean.match(/^.{10,90}?[.!?…](?=\s|$)/);
+  if (m) return m[0].trim();
+  return clean.length <= 90 ? clean : clean.slice(0, 90).replace(/\s+\S*$/, '') + '…';
+}
+
+function tweetBodyHTML(t) {
+  const parts = (t.text || '')
+    .split(/\n+/).map(s => s.trim()).filter(Boolean)
+    .map(s => `<p>${esc(s)}</p>`);
+  if (t.media && Array.isArray(t.media.photos)) {
+    for (const p of t.media.photos) parts.push(`<figure><img src="${esc(p.url)}" alt=""></figure>`);
+  }
+  if (t.quote) {
+    const q = t.quote;
+    parts.push(`<blockquote><p>${esc(q.text)}</p><p>— ${esc(q.author?.name || '')} (@${esc(q.author?.screen_name || '')})</p></blockquote>`);
+  }
+  return parts.join('');
+}
+
+// Hilo desenrollado en ThreadReaderApp (solo existe si alguien lo pidió allí)
+async function fetchThreadReader(rootId) {
+  try {
+    const r = await fetch(`https://threadreaderapp.com/thread/${rootId}.html`, {
+      headers: { 'user-agent': UA },
+      signal: AbortSignal.timeout(15000),
+      redirect: 'follow'
+    });
+    if (!r.ok) return null;
+    const virtualConsole = new VirtualConsole();
+    const dom = new JSDOM(await r.text(), { virtualConsole });
+    const tweets = [...dom.window.document.querySelectorAll('div[id^="tweet_"].content-tweet')];
+    if (!tweets.length) return null;
+
+    const out = [];
+    for (const tw of tweets) {
+      tw.querySelectorAll('.tw-permalink, .tweet-url, script, style').forEach(n => n.remove());
+      // Emojis vienen como <img>: se sustituyen por su carácter (está en el alt)
+      tw.querySelectorAll('img').forEach(img => {
+        const src = img.getAttribute('data-src') || img.getAttribute('src') || '';
+        if (/emoji/i.test(img.className + ' ' + src)) {
+          img.replaceWith(dom.window.document.createTextNode(img.getAttribute('alt') || ''));
+        }
+      });
+      const figs = [];
+      tw.querySelectorAll('.entity-image').forEach(span => {
+        const img = span.querySelector('img');
+        const src = img && (img.getAttribute('data-src') || img.getAttribute('src'));
+        if (src && !src.endsWith('1px.png')) figs.push(`<figure><img src="${esc(src)}" alt=""></figure>`);
+        span.remove();
+      });
+      const text = tw.textContent.replace(/\s+/g, ' ').trim();
+      if (text) out.push(`<p>${esc(text)}</p>`);
+      out.push(...figs);
+    }
+    return out.join('');
+  } catch {
+    return null;
+  }
+}
+
+async function extractXThread(id, originalUrl) {
+  const first = await fetchFxTweet(id);
+  if (!first) {
+    throw new Error('No se pudo leer el post de X (¿cuenta privada, post borrado o la API de FxTwitter caída?)');
+  }
+
+  // Subir por la cadena de auto-respuestas hasta la raíz del hilo
+  const chain = [first];
+  let current = first;
+  while (
+    current.replying_to_status &&
+    current.replying_to &&
+    current.replying_to.toLowerCase() === first.author.screen_name.toLowerCase() &&
+    chain.length < 50
+  ) {
+    const parent = await fetchFxTweet(current.replying_to_status);
+    if (!parent || parent.author.screen_name.toLowerCase() !== first.author.screen_name.toLowerCase()) break;
+    chain.unshift(parent);
+    current = parent;
+  }
+  const root = chain[0];
+
+  // Mejor fuente para hilos: ThreadReaderApp (incluye lo que va DESPUÉS del post pegado)
+  let content = await fetchThreadReader(root.id);
+  let source = 'threadreader';
+  if (!content) {
+    content = chain.map(tweetBodyHTML).join('\n');
+    source = 'fxtwitter';
+  }
+
+  const plain = content.replace(/<[^>]+>/g, ' ');
+  const words = plain.split(/\s+/).filter(Boolean).length;
+  const isThread = source === 'threadreader' || chain.length > 1;
+
+  return {
+    url: originalUrl,
+    title: deriveTitle(root.text, root.author.name),
+    byline: root.author.name,
+    siteName: `X · @${root.author.screen_name}${isThread ? ' (hilo)' : ''}`,
+    excerpt: '',
+    leadImage: '',
+    publishedTime: root.created_timestamp ? new Date(root.created_timestamp * 1000).toISOString() : '',
+    lang: root.lang || '',
+    minutes: Math.max(1, Math.round(words / 220)),
+    words,
+    content
+  };
+}
+
+app.listen(PORT, () => {
+  console.log(`Quiosco funcionando en http://localhost:${PORT}`);
+});

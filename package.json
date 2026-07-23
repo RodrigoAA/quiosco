@@ -1,0 +1,16 @@
+{
+  "name": "quiosco",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Quiosco — maquetador local de revistas A4 a partir de artículos de Substack y blogs",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "dependencies": {
+    "@mozilla/readability": "^0.5.0",
+    "express": "^4.19.2",
+    "jsdom": "^24.1.0",
+    "pagedjs": "^0.4.3"
+  }
+}

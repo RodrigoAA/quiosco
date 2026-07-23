@@ -1,0 +1,99 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiosco — editor de revista</title>
+<link rel="stylesheet" href="/ui.css">
+</head>
+<body>
+  <header id="topbar">
+    <h1>Quiosco</h1>
+    <span id="status" class="status"></span>
+    <div class="actions">
+      <a class="btn" href="/print.html" target="_blank">Vista de impresión ↗</a>
+      <a id="exportLink" class="btn hidden" download></a>
+      <button id="exportBtn" class="btn primary" type="button">Exportar PDF</button>
+    </div>
+  </header>
+
+  <main>
+    <aside id="sidebar">
+      <section class="panel">
+        <h2>Revista</h2>
+        <label>Título
+          <input id="s-title" type="text">
+        </label>
+        <label>Subtítulo
+          <input id="s-subtitle" type="text">
+        </label>
+        <div class="row2">
+          <label>Número
+            <input id="s-issue" type="text" placeholder="Nº 1">
+          </label>
+          <label>Fecha
+            <input id="s-date" type="text" placeholder="auto: mes actual">
+          </label>
+        </div>
+        <div class="row2">
+          <label>Color de acento
+            <input id="s-accent" type="color">
+          </label>
+          <label>Columnas
+            <select id="s-columns">
+              <option value="2">2 — revista (recomendado)</option>
+              <option value="3">3 — prensa</option>
+              <option value="4">4 — boletín compacto</option>
+            </select>
+          </label>
+        </div>
+        <label>Tipografía
+          <select id="s-font">
+            <option value="clasica">Clásica — Georgia</option>
+            <option value="editorial">Editorial — Playfair Display + Lora</option>
+            <option value="elegante">Elegante — Garamond</option>
+            <option value="prensa">Prensa — Archivo + Newsreader</option>
+            <option value="moderna">Moderna — Inter (todo sans)</option>
+          </select>
+        </label>
+        <label>Imagen de portada (URL)
+          <input id="s-coverImage" type="text" placeholder="vacío = primera imagen disponible">
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>Artículos</h2>
+        <form id="addForm">
+          <input id="addUrl" type="url" placeholder="https://… (Substack, blog o post/hilo de X)" required>
+          <button id="addBtn" class="btn primary" type="submit">Añadir</button>
+        </form>
+        <p id="addError" class="error hidden"></p>
+        <ul id="articleList"></ul>
+        <p class="tip">Marca/desmarca la casilla para incluir un artículo sin borrarlo.
+        Con ✎ puedes retocar título, autor y entradilla.</p>
+        <p class="tip">Con enlaces de X: pega la URL de cualquier post del hilo. Si el hilo
+        está en ThreadReaderApp se recupera entero; si no, se recupera desde el principio
+        hasta el post pegado (pega el último para tenerlo completo).</p>
+      </section>
+    </aside>
+
+    <section id="previewWrap">
+      <div class="preview-tools">
+        <span>Previsualización</span>
+        <label>Zoom
+          <select id="zoom">
+            <option value="50">50 %</option>
+            <option value="65" selected>65 %</option>
+            <option value="80">80 %</option>
+            <option value="100">100 %</option>
+          </select>
+        </label>
+        <button id="refresh" class="btn" type="button">Actualizar</button>
+      </div>
+      <iframe id="preview" src="/print.html" title="Previsualización de la revista"></iframe>
+    </section>
+  </main>
+
+  <script src="/app.js"></script>
+</body>
+</html>

@@ -1,0 +1,5 @@
+node_modules/
+
+# Contenido personal: la revista y los PDFs no se suben al repo
+data/
+exports/
