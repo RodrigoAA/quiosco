@@ -24,7 +24,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'finish', 'backstyle', 'coverImage'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage'];
 
 function loadMag() {
   try {
@@ -77,6 +77,7 @@ function bindSettings() {
   if (!mag.settings.finish) mag.settings.finish = 'caballete';
   if (!mag.settings.backstyle) mag.settings.backstyle = 'raya';
   if (!mag.settings.align) mag.settings.align = 'justificado';
+  if (!mag.settings.paragraphs) mag.settings.paragraphs = 'sangria';
 
   for (const f of SETTING_FIELDS) {
     const input = $('#s-' + f);

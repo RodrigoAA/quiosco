@@ -30,6 +30,7 @@ const DEFAULT_MAGAZINE = {
     font: 'clasica',
     columns: '2',
     align: 'justificado',
+    paragraphs: 'sangria',
     finish: 'caballete',
     backstyle: 'raya',
     coverImage: ''

@@ -482,3 +482,9 @@ html[data-align='izquierda'] .article-body { text-align: left; }
 /* Alineación por artículo (anula la global y la de columnas) */
 .article.align-izquierda .article-body { text-align: left; }
 .article.align-justificado .article-body { text-align: justify; }
+
+/* Párrafos «espaciado»: hueco entre párrafos y sin sangría (estilo web).
+   Va por clase en la sección: Paged.js pierde las reglas p+p con selector
+   de atributo en html. */
+.article.parr-esp .article-body p { margin: 0 0 2.6mm; }
+.article.parr-esp .article-body p + p { text-indent: 0; }

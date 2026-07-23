@@ -403,6 +403,7 @@ async function main() {
   if (font !== 'clasica') document.documentElement.dataset.font = font;
   const align = qp.get('align') || s.align || 'justificado';
   if (align === 'izquierda') document.documentElement.dataset.align = 'izquierda';
+  const paragraphs = qp.get('paragraphs') || s.paragraphs || 'sangria';
   const globalCols = Math.min(4, Math.max(1, parseInt(qp.get('cols') || s.columns, 10) || 2));
   // Acabado «caballete»: contraportada al final y total de páginas múltiplo de 4
   const saddle = (qp.get('finish') || s.finish || 'caballete') === 'caballete';
@@ -420,6 +421,9 @@ async function main() {
   content.innerHTML = coverHTML(s, arts) + tocHTML(arts)
     + arts.map((a, i) => articleHTML(a, i, globalCols)).join('')
     + (saddle ? backcoverHTML(s, arts, backstyle) : '');
+  if (paragraphs === 'espaciado') {
+    content.querySelectorAll('.article').forEach(el => el.classList.add('parr-esp'));
+  }
 
   // Las fuentes deben estar cargadas ANTES de que Paged.js mida el texto
   const FONT_FAMILIES = {
