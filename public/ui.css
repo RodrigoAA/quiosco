@@ -403,6 +403,23 @@ input[type="color"] {
   font-weight: 700;
   flex-shrink: 0;
 }
+.news-dismiss {
+  border: none;
+  background: none;
+  color: var(--line-strong);
+  font-size: 16px;
+  width: 22px;
+  height: 28px;
+  cursor: pointer;
+  flex-shrink: 0;
+  border-radius: 6px;
+  line-height: 1;
+  transition: color 0.12s, background 0.12s;
+}
+.news-dismiss:hover {
+  color: var(--danger);
+  background: var(--hover);
+}
 
 /* ---------- Paleta de la portada ---------- */
 

@@ -251,6 +251,7 @@ async function loadNews() {
       ${it.added
         ? '<span class="news-added" title="Ya está en la revista">✓</span>'
         : '<button class="btn news-add" type="button" title="Añadir al número actual">＋</button>'}
+      <button class="news-dismiss" type="button" title="Descartar (no volverá a aparecer)">×</button>
     </li>`).join('');
   } catch {
     list.innerHTML = '';
@@ -298,6 +299,17 @@ function bindFeeds() {
   });
 
   $('#newsList').addEventListener('click', async ev => {
+    const dis = ev.target.closest('.news-dismiss');
+    if (dis) {
+      const li = dis.closest('.news-item');
+      li.remove();
+      fetch('/api/news/dismiss', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ url: li.dataset.url })
+      }).catch(() => { });
+      return;
+    }
     const btn = ev.target.closest('.news-add');
     if (!btn) return;
     const li = btn.closest('.news-item');

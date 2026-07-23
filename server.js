@@ -576,6 +576,19 @@ app.post('/api/feeds/remove', async (req, res) => {
   res.json({ ok: true });
 });
 
+// Descartar una novedad: no vuelve a aparecer en la lista
+app.post('/api/news/dismiss', async (req, res) => {
+  const { url } = req.body || {};
+  if (!url) return res.status(400).json({ error: 'Falta la URL' });
+  const data = await loadFeeds();
+  data.dismissed = data.dismissed || [];
+  const key = normUrl(url);
+  if (!data.dismissed.includes(key)) data.dismissed.push(key);
+  data.dismissed = data.dismissed.slice(-500);
+  await saveFeeds(data);
+  res.json({ ok: true });
+});
+
 // Últimos posts de todos los feeds, marcando los que ya están en algún número
 app.get('/api/news', async (_req, res) => {
   const data = await loadFeeds();
@@ -590,16 +603,19 @@ app.get('/api/news', async (_req, res) => {
     }
   } catch { /* sin números aún */ }
 
+  const dismissed = new Set(data.dismissed || []);
   const results = await Promise.allSettled(data.feeds.map(async f => {
     const feed = await fetchFeed(f.url);
     if (!feed) throw new Error('feed ilegible');
-    return feed.items.slice(0, 12).map(it => ({
-      title: it.title,
-      link: it.link,
-      date: it.date,
-      source: f.title,
-      added: existing.has(normUrl(it.link))
-    }));
+    return feed.items.slice(0, 12)
+      .filter(it => !dismissed.has(normUrl(it.link)))
+      .map(it => ({
+        title: it.title,
+        link: it.link,
+        date: it.date,
+        source: f.title,
+        added: existing.has(normUrl(it.link))
+      }));
   }));
 
   const items = results.flatMap(r => (r.status === 'fulfilled' ? r.value : []));
