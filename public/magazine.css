@@ -247,6 +247,12 @@ img { max-width: 100%; }
   font-weight: 700;
   line-height: 1.25;
 }
+/* Los títulos del índice enlazan al artículo (clicable también en el PDF) */
+.toc-title a {
+  color: inherit;
+  text-decoration: none;
+}
+.toc-title a:hover { color: var(--accent); }
 .toc-dots {
   flex: 1 1 auto;
   min-width: 6mm;

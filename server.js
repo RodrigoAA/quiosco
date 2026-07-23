@@ -807,6 +807,11 @@ async function fetchFxTweet(id) {
 
 // Titular a partir de la primera frase del post
 function deriveTitle(text, author) {
+  // Si la primera línea es corta, es el título (las notas largas de X lo traen así)
+  const firstLine = (text || '').split('\n')[0].replace(/https?:\/\/\S+/g, '').trim();
+  if (firstLine.length >= 3 && firstLine.length <= 90 && firstLine.length < (text || '').trim().length) {
+    return firstLine;
+  }
   const clean = (text || '').replace(/https?:\/\/\S+/g, '').replace(/\s+/g, ' ').trim();
   if (!clean) return `Publicado por ${author}`;
   const m = clean.match(/^.{10,90}?[.!?…](?=\s|$)/);
@@ -859,11 +864,15 @@ async function fetchThreadReader(rootId) {
         if (src && !src.endsWith('1px.png')) figs.push(`<figure><img src="${esc(src)}" alt=""></figure>`);
         span.remove();
       });
-      const text = tw.textContent.replace(/\s+/g, ' ').trim();
-      if (text) out.push(`<p>${esc(text)}</p>`);
+      // Los <br> separan párrafos (clave en notas largas de un solo post)
+      tw.querySelectorAll('br').forEach(br => br.replaceWith('\n'));
+      const text = tw.textContent.replace(/[ \t]+/g, ' ').trim();
+      for (const para of text.split(/\n+/).map(s => s.trim()).filter(Boolean)) {
+        out.push(`<p>${esc(para)}</p>`);
+      }
       out.push(...figs);
     }
-    return out.join('');
+    return { html: out.join(''), tweets: tweets.length };
   } catch {
     return null;
   }
@@ -891,10 +900,16 @@ async function extractXThread(id, originalUrl) {
   }
   const root = chain[0];
 
-  // Mejor fuente para hilos: ThreadReaderApp (incluye lo que va DESPUÉS del post pegado)
-  let content = await fetchThreadReader(root.id);
-  let source = 'threadreader';
-  if (!content) {
+  // ThreadReaderApp solo compensa si sabe MÁS que nosotros (hay hilo por
+  // debajo del post pegado); para posts únicos o cadena completa, el texto
+  // de FxTwitter conserva mejor los párrafos originales.
+  const tra = await fetchThreadReader(root.id);
+  let content;
+  let source;
+  if (tra && tra.tweets > chain.length) {
+    content = tra.html;
+    source = 'threadreader';
+  } else {
     content = chain.map(tweetBodyHTML).join('\n');
     source = 'fxtwitter';
   }

@@ -71,7 +71,7 @@ function tocHTML(arts) {
     <ol>
       ${arts.map((a, i) => `<li class="toc-entry">
         <div class="toc-line">
-          <span class="toc-title">${esc(a.title)}</span>
+          <span class="toc-title"><a href="#art-${i}">${esc(a.title)}</a></span>
           <span class="toc-dots"></span>
           <a class="toc-page" href="#art-${i}"></a>
         </div>
