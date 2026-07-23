@@ -235,6 +235,53 @@ function bindPreviewTools() {
 
 /* ---------- Quitar imágenes con clic (en la previsualización) ---------- */
 
+// Borra un FRAGMENTO de texto (parte de un párrafo) del contenido fuente:
+// localiza el fragmento por texto normalizado y lo elimina con un Range.
+function deletePartFromDoc(doc, it) {
+  const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
+  const target = norm(it.part || '');
+  if (target.length < 3) return false;
+
+  const blocks = [...doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, figcaption')]
+    .filter(el => norm(el.textContent).includes(target));
+  if (!blocks.length) return false;
+  blocks.sort((a, b) => a.textContent.length - b.textContent.length);
+  const block = blocks[0];
+
+  // Mapa: texto normalizado → (nodo de texto, offset)
+  const walker = doc.createTreeWalker(block, NodeFilter.SHOW_TEXT);
+  let normStr = '';
+  const map = [];
+  let prevSpace = true;
+  let node;
+  while ((node = walker.nextNode())) {
+    const t = node.nodeValue;
+    for (let i = 0; i < t.length; i++) {
+      if (/\s/.test(t[i])) {
+        if (!prevSpace) {
+          normStr += ' ';
+          map.push({ node, offset: i });
+          prevSpace = true;
+        }
+      } else {
+        normStr += t[i].toLowerCase();
+        map.push({ node, offset: i });
+        prevSpace = false;
+      }
+    }
+  }
+  const idx = normStr.indexOf(target);
+  if (idx < 0) return false;
+  const startPos = map[idx];
+  const endPos = map[idx + target.length - 1];
+  const range = doc.createRange();
+  range.setStart(startPos.node, startPos.offset);
+  range.setEnd(endPos.node, endPos.offset + 1);
+  range.deleteContents();
+  if (!block.textContent.trim()) block.remove();
+  return true;
+}
+
 let imgEditOn = false;
 const undoStack = [];
 
@@ -313,6 +360,12 @@ function initImageRemoval() {
     syncPreviewState();
   });
 
+  $('#trimCancelBtn').addEventListener('click', () => {
+    try {
+      $('#preview').contentWindow.postMessage({ quiosco: 'clear-trims' }, '*');
+    } catch { /* iframe cargando */ }
+  });
+
   // El estado sobrevive a las recargas del iframe (cada guardado lo recarga)
   $('#preview').addEventListener('load', () => setTimeout(syncPreviewState, 500));
 
@@ -322,6 +375,7 @@ function initImageRemoval() {
 
     if (d.quiosco === 'trim-count') {
       status(d.n ? `${d.n} recorte(s) marcados — pulsa ✂ otra vez para aplicarlos` : '');
+      $('#trimCancelBtn').classList.toggle('hidden', !d.n);
       return;
     }
     if (d.quiosco !== 'apply-trims' || !Array.isArray(d.items) || !d.items.length) return;
@@ -362,6 +416,8 @@ function initImageRemoval() {
           if (fig && fig.querySelectorAll('img').length === 1) fig.remove();
           else (img.closest('picture') || img).remove();
           appliedHere++;
+        } else if (it.type === 'textpart') {
+          if (deletePartFromDoc(doc, it)) appliedHere++;
         } else if (it.type === 'text') {
           const target = norm(it.text || '');
           if (target.length < 3) continue;

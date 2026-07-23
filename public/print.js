@@ -180,9 +180,18 @@ function initImageEditMode() {
   const sendTrimCount = () => {
     window.parent.postMessage({ quiosco: 'trim-count', n: marks.length }, '*');
   };
+  const clearMarkEl = el => {
+    if (el.tagName === 'MARK') el.replaceWith(...el.childNodes);
+    else el.classList.remove('trim-marked');
+  };
   const unmark = el => {
     marks = marks.filter(m => m.el !== el);
-    el.classList.remove('trim-marked');
+    clearMarkEl(el);
+    sendTrimCount();
+  };
+  const clearAllMarks = () => {
+    marks.forEach(m => clearMarkEl(m.el));
+    marks = [];
     sendTrimCount();
   };
   const applyMarks = () => {
@@ -191,9 +200,7 @@ function initImageEditMode() {
       quiosco: 'apply-trims',
       items: marks.map(({ el, ...rest }) => rest)
     }, '*');
-    marks.forEach(m => m.el.classList.remove('trim-marked'));
-    marks = [];
-    sendTrimCount();
+    clearAllMarks();
   };
 
   // Zoom −/+: el zoom lo aplica el editor (padre); desde aquí solo se pide
@@ -207,6 +214,7 @@ function initImageEditMode() {
     if (ev.data && ev.data.quiosco === 'goto' && pageGoTo) {
       pageGoTo(Number(ev.data.page) || 1);
     }
+    if (ev.data && ev.data.quiosco === 'clear-trims') clearAllMarks();
     if (ev.data && ev.data.quiosco === 'view') {
       const wasEditing = document.body.classList.contains('img-edit');
       document.body.classList.toggle('img-edit', !!ev.data.imgEdit);
@@ -283,23 +291,64 @@ function initImageEditMode() {
     const artIndex = parseInt(startArticle.dataset.art ?? '', 10);
     if (isNaN(artIndex)) return;
 
+    // Texto seleccionado REALMENTE dentro de cada bloque (evita el efecto
+    // frontera: una selección que «roza» el párrafo siguiente no lo incluye)
+    const selLenIn = el => {
+      try {
+        const r = range.cloneRange();
+        const rb = document.createRange();
+        rb.selectNodeContents(el);
+        if (r.compareBoundaryPoints(Range.START_TO_START, rb) < 0) r.setStart(rb.startContainer, rb.startOffset);
+        if (r.compareBoundaryPoints(Range.END_TO_END, rb) > 0) r.setEnd(rb.endContainer, rb.endOffset);
+        if (r.collapsed) return 0;
+        return r.toString().replace(/\s+/g, '').length;
+      } catch { return 0; }
+    };
     const candidates = [...document.querySelectorAll(BLOCK_SEL)].filter(el => {
       try {
-        return range.intersectsNode(el)
-          && el.closest('.article')?.dataset.art === String(artIndex)
-          && el.textContent.trim().length > 0;
+        return el.closest('.article')?.dataset.art === String(artIndex)
+          && el.textContent.trim().length > 0
+          && selLenIn(el) >= 3;
       } catch { return false; }
     });
     // Solo bloques de nivel superior (si cae un blockquote entero, no sus <p> internos)
     const blocks = candidates.filter(el => !candidates.some(o => o !== el && o.contains(el)));
     if (!blocks.length) return;
 
-    blocks.forEach(b => {
-      if (marks.some(m => m.el === b)) return;
+    // Por cada bloque: si la selección lo cubre solo en parte, se marca el
+    // fragmento; si lo cubre (casi) entero, se marca el bloque completo.
+    // Los sub-rangos se calculan ANTES de mutar el DOM.
+    const jobs = blocks.map(b => {
+      const rb = document.createRange();
+      rb.selectNodeContents(b);
+      const r = range.cloneRange();
+      if (r.compareBoundaryPoints(Range.START_TO_START, rb) < 0) r.setStart(rb.startContainer, rb.startOffset);
+      if (r.compareBoundaryPoints(Range.END_TO_END, rb) > 0) r.setEnd(rb.endContainer, rb.endOffset);
+      return { b, r };
+    });
+    jobs.forEach(({ b, r }) => {
+      if (marks.some(m => m.el === b) || b.closest('.trim-marked')) return;
+      const selNorm = r.toString().replace(/\s+/g, ' ').trim();
+      const blockNorm = b.textContent.replace(/\s+/g, ' ').trim();
+      if (selNorm.length >= 3 && selNorm.length < blockNorm.length - 2) {
+        try {
+          const markEl = document.createElement('mark');
+          markEl.className = 'trim-marked';
+          markEl.appendChild(r.extractContents());
+          r.insertNode(markEl);
+          marks.push({
+            type: 'textpart',
+            art: artIndex,
+            part: markEl.textContent.replace(/\s+/g, ' ').trim().slice(0, 400),
+            el: markEl
+          });
+          return;
+        } catch { /* si el rango no se puede envolver, cae a bloque entero */ }
+      }
       marks.push({
         type: 'text',
         art: artIndex,
-        text: b.textContent.replace(/\s+/g, ' ').trim().slice(0, 400),
+        text: blockNorm.slice(0, 400),
         el: b
       });
       b.classList.add('trim-marked');
