@@ -425,7 +425,10 @@ async function tgLoop() {
 
         const urls = urlsInMessage(msg);
         if (!urls.length) {
-          await tgApi('sendMessage', { chat_id: msg.chat.id, text: 'No veo ninguna URL en ese mensaje 🤔' });
+          const saludo = (msg.text || '').startsWith('/')
+            ? '¡Hola! 🗞️ Soy tu quiosco. Compárteme enlaces de artículos (Substack, blogs, X) y los añadiré a tu revista.'
+            : 'No veo ninguna URL en ese mensaje 🤔 Compárteme el enlace del artículo.';
+          await tgApi('sendMessage', { chat_id: msg.chat.id, text: saludo });
           continue;
         }
         for (const url of urls) {
