@@ -453,11 +453,10 @@ html[data-align='izquierda'] .article-body { text-align: left; }
    A 1 columna (ensayo): cuerpo mayor, más interlínea y márgenes
    laterales para mantener una medida de línea legible. */
 
-.article.cols-1 { padding: 0 20mm; }
 .article.cols-1 .article-body {
   columns: 1;
   font-size: 10.3pt;
-  line-height: 1.58;
+  line-height: 1.6;
 }
 .article.cols-1 .article-body p + p { text-indent: 5mm; }
 
