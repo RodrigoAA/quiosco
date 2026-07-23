@@ -93,6 +93,7 @@
         <div class="row2">
           <label>Columnas
             <select id="s-columns">
+              <option value="1">1 — ensayo</option>
               <option value="2">2 — revista</option>
               <option value="3">3 — prensa</option>
               <option value="4">4 — boletín</option>
@@ -140,10 +141,12 @@
             title="Recortar: pulsa imágenes o selecciona texto para marcarlos; en rojo, vuelve a pulsar para salir cancelando">
             <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="6" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><line x1="20" y1="4" x2="8.12" y2="15.88"/><line x1="14.47" y1="14.48" x2="20" y2="20"/><line x1="8.12" y1="8.12" x2="12" y2="12"/></svg>
           </button>
-          <button id="applyBtn" class="btn icon confirm hidden" type="button" title="Aplicar los recortes marcados">
-            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+          <span id="trimInfo" class="trim-info hidden"></span>
+          <button id="applyBtn" class="btn confirm hidden" type="button" title="Aplicar los recortes marcados">
+            <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><polyline points="20 6 9 17 4 12"/></svg>
+            Aplicar
           </button>
-          <button id="trimCancelBtn" class="btn icon hidden" type="button" title="Cancelar todos los recortes marcados">
+          <button id="trimCancelBtn" class="btn icon hidden" type="button" title="Salir del modo recorte sin aplicar">
             <svg class="ic" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><line x1="18" y1="6" x2="6" y2="18"/><line x1="6" y1="6" x2="18" y2="18"/></svg>
           </button>
           <button id="undoBtn" class="btn icon hidden" type="button" title="Deshacer el último recorte aplicado">

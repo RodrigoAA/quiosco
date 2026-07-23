@@ -359,21 +359,38 @@ input[type="color"] {
   background: var(--hover);
   color: var(--ink);
 }
-#imgEditBtn.active {
-  background: var(--danger);
-  border-color: var(--danger);
-  color: #ffffff;
+/* Modo recorte: tijera «pressed» sutil, guía/contador dentro de la tarjeta,
+   Aplicar en verde con texto, ✕ para salir */
+#imgEditBtn.active,
+.preview-tools #imgEditBtn.active {
+  background: var(--accent-soft);
+  border-color: transparent;
+  color: var(--danger);
 }
-#imgEditBtn.active:hover { background: #a83226; }
+#imgEditBtn.active:hover,
+.preview-tools #imgEditBtn.active:hover { background: rgba(179, 64, 42, 0.17); }
+
+.trim-info {
+  font-size: 12px;
+  color: var(--muted);
+  padding: 0 6px;
+  white-space: nowrap;
+  font-variant-numeric: tabular-nums;
+}
 
 .preview-tools .btn.confirm,
 .btn.confirm {
+  height: 28px;
+  padding: 0 12px;
+  gap: 6px;
+  font-size: 12.5px;
   background: #2e7d32;
   border-color: #2e7d32;
   color: #ffffff;
 }
 .preview-tools .btn.confirm:hover,
-.btn.confirm:hover { background: #256428; border-color: #256428; }
+.btn.confirm:hover { background: #256428; border-color: #256428; color: #ffffff; }
+.btn.confirm .ic { width: 14px; height: 14px; }
 
 .tb-group {
   display: flex;

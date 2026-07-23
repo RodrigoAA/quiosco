@@ -449,7 +449,17 @@ html[data-align='izquierda'] .article-body { text-align: left; }
 
 /* ---------- Variantes de columnas (2 es la base) ----------
    A más columnas, columna más estrecha: se baja el cuerpo y,
-   a 4, se quita el justificado para evitar ríos de espacios. */
+   a 4, se quita el justificado para evitar ríos de espacios.
+   A 1 columna (ensayo): cuerpo mayor, más interlínea y márgenes
+   laterales para mantener una medida de línea legible. */
+
+.article.cols-1 .article-body {
+  columns: 1;
+  font-size: 10.3pt;
+  line-height: 1.58;
+  padding: 0 20mm;
+}
+.article.cols-1 .article-body p + p { text-indent: 5mm; }
 
 .article.cols-3 .article-body {
   columns: 3;
@@ -469,3 +479,7 @@ html[data-align='izquierda'] .article-body { text-align: left; }
 .article.cols-4 .article-body p + p { text-indent: 3mm; }
 .article.cols-4 .article-body p.opener:not([data-split-from])::first-letter { font-size: 23pt; }
 .article.cols-4 .article-body blockquote { font-size: 9.5pt; }
+
+/* Alineación por artículo (anula la global y la de columnas) */
+.article.align-izquierda .article-body { text-align: left; }
+.article.align-justificado .article-body { text-align: justify; }

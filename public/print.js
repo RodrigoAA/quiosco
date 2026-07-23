@@ -77,8 +77,9 @@ function articleHTML(a, i, globalCols) {
     .filter(Boolean).join('  ·  ');
   const lead = a.leadImage && !contentStartsWithImage(a.content)
     ? `<figure class="lead"><img src="${esc(a.leadImage)}" alt=""></figure>` : '';
-  const cols = Math.min(4, Math.max(2, parseInt(a.cols, 10) || globalCols));
-  return `<section class="article cols-${cols}" id="art-${i}" data-art="${i}"${a.lang ? ` lang="${esc(a.lang)}"` : ''}>
+  const cols = Math.min(4, Math.max(1, parseInt(a.cols, 10) || globalCols));
+  const alignCls = a.align === 'izquierda' || a.align === 'justificado' ? ` align-${a.align}` : '';
+  return `<section class="article cols-${cols}${alignCls}" id="art-${i}" data-art="${i}"${a.lang ? ` lang="${esc(a.lang)}"` : ''}>
     <header class="article-header">
       <p class="kicker">${esc(a.siteName || hostFromUrl(a.url))}</p>
       <h1 class="article-title">${esc(a.title)}</h1>
@@ -402,7 +403,7 @@ async function main() {
   if (font !== 'clasica') document.documentElement.dataset.font = font;
   const align = qp.get('align') || s.align || 'justificado';
   if (align === 'izquierda') document.documentElement.dataset.align = 'izquierda';
-  const globalCols = Math.min(4, Math.max(2, parseInt(qp.get('cols') || s.columns, 10) || 2));
+  const globalCols = Math.min(4, Math.max(1, parseInt(qp.get('cols') || s.columns, 10) || 2));
   // Acabado «caballete»: contraportada al final y total de páginas múltiplo de 4
   const saddle = (qp.get('finish') || s.finish || 'caballete') === 'caballete';
   const backstyle = qp.get('back') || s.backstyle || 'raya';

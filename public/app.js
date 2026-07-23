@@ -92,14 +92,24 @@ function articleItem(a) {
     <div class="art-edit hidden">
       <label>Título <input data-field="title" value="${esc(a.title)}"></label>
       <label>Autor <input data-field="byline" value="${esc(a.byline || '')}"></label>
-      <label>Columnas de este artículo
-        <select data-field="cols">
-          <option value="" ${!a.cols ? 'selected' : ''}>Como la revista</option>
-          <option value="2" ${a.cols === '2' ? 'selected' : ''}>2</option>
-          <option value="3" ${a.cols === '3' ? 'selected' : ''}>3</option>
-          <option value="4" ${a.cols === '4' ? 'selected' : ''}>4</option>
-        </select>
-      </label>
+      <div class="row2">
+        <label>Columnas
+          <select data-field="cols">
+            <option value="" ${!a.cols ? 'selected' : ''}>Como la revista</option>
+            <option value="1" ${a.cols === '1' ? 'selected' : ''}>1</option>
+            <option value="2" ${a.cols === '2' ? 'selected' : ''}>2</option>
+            <option value="3" ${a.cols === '3' ? 'selected' : ''}>3</option>
+            <option value="4" ${a.cols === '4' ? 'selected' : ''}>4</option>
+          </select>
+        </label>
+        <label>Alineación
+          <select data-field="align">
+            <option value="" ${!a.align ? 'selected' : ''}>Como la revista</option>
+            <option value="justificado" ${a.align === 'justificado' ? 'selected' : ''}>Justificado</option>
+            <option value="izquierda" ${a.align === 'izquierda' ? 'selected' : ''}>Izquierda</option>
+          </select>
+        </label>
+      </div>
       <label>Entradilla <textarea data-field="excerpt" rows="3">${esc(a.excerpt || '')}</textarea></label>
       <label>Imagen destacada (URL) <input data-field="leadImage" value="${esc(a.leadImage || '')}"></label>
       <a href="${esc(a.url)}" target="_blank">Ver original ↗</a>
@@ -357,9 +367,14 @@ function bindTopNav() {
 function setTrimMode(on) {
   imgEditOn = on;
   $('#imgEditBtn').classList.toggle('active', on);
-  if (!on) {
+  $('#trimCancelBtn').classList.toggle('hidden', !on);
+  const info = $('#trimInfo');
+  if (on) {
+    info.textContent = 'marca imágenes o selecciona texto';
+    info.classList.remove('hidden');
+  } else {
+    info.classList.add('hidden');
     $('#applyBtn').classList.add('hidden');
-    $('#trimCancelBtn').classList.add('hidden');
   }
   syncPreviewState();
 }
@@ -378,7 +393,6 @@ function initImageRemoval() {
     }
     postToPreview({ quiosco: 'clear-trims' });
     setTrimMode(false);
-    status('');
   });
 
   $('#applyBtn').addEventListener('click', () => {
@@ -389,7 +403,6 @@ function initImageRemoval() {
   $('#trimCancelBtn').addEventListener('click', () => {
     postToPreview({ quiosco: 'clear-trims' });
     setTrimMode(false);
-    status('');
   });
 
   // El estado sobrevive a las recargas del iframe (cada guardado lo recarga)
@@ -400,9 +413,10 @@ function initImageRemoval() {
     if (!d) return;
 
     if (d.quiosco === 'trim-count') {
-      status(d.n ? `${d.n} recorte(s) marcados` : (imgEditOn ? '' : $('#status').textContent));
+      if (imgEditOn) {
+        $('#trimInfo').textContent = d.n ? `${d.n} marcado(s)` : 'marca imágenes o selecciona texto';
+      }
       $('#applyBtn').classList.toggle('hidden', !d.n || !imgEditOn);
-      $('#trimCancelBtn').classList.toggle('hidden', !d.n || !imgEditOn);
       return;
     }
     if (d.quiosco !== 'apply-trims' || !Array.isArray(d.items) || !d.items.length) return;
