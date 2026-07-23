@@ -184,6 +184,28 @@ function initImageEditMode() {
   if (window.parent === window) return; // solo tiene sentido embebido en el editor
   document.body.classList.add('embedded');
 
+  // Recorte por lotes: se marcan imágenes (clic) y bloques de texto (selección);
+  // todo se aplica de golpe al apagar el modo ✂
+  let marks = [];
+  const sendTrimCount = () => {
+    window.parent.postMessage({ quiosco: 'trim-count', n: marks.length }, '*');
+  };
+  const unmark = el => {
+    marks = marks.filter(m => m.el !== el);
+    el.classList.remove('trim-marked');
+    sendTrimCount();
+  };
+  const applyMarks = () => {
+    if (!marks.length) return;
+    window.parent.postMessage({
+      quiosco: 'apply-trims',
+      items: marks.map(({ el, ...rest }) => rest)
+    }, '*');
+    marks.forEach(m => m.el.classList.remove('trim-marked'));
+    marks = [];
+    sendTrimCount();
+  };
+
   // Zoom −/+: el zoom lo aplica el editor (padre); desde aquí solo se pide
   document.getElementById('tb-zoom').classList.remove('hidden');
   document.getElementById('tb-zoomout').addEventListener('click', () =>
@@ -201,6 +223,7 @@ function initImageEditMode() {
       if (!wasEditing && ev.data.imgEdit) {
         try { window.getSelection().removeAllRanges(); } catch { /* sin selección */ }
       }
+      if (wasEditing && !ev.data.imgEdit) applyMarks();
       document.body.classList.toggle('focusfull', !!ev.data.focus);
       // La toolbar mini no debe encogerse con el zoom de la previsualización
       const z = Number(ev.data.zoom);
@@ -216,6 +239,13 @@ function initImageEditMode() {
 
   document.getElementById('pages').addEventListener('click', ev => {
     if (!document.body.classList.contains('img-edit')) return;
+    // Repulsar algo marcado lo desmarca (imagen o bloque de texto)
+    const marked = ev.target.closest('.trim-marked');
+    if (marked) {
+      ev.preventDefault();
+      unmark(marked);
+      return;
+    }
     const img = ev.target.closest('img');
     if (!img) return;
     const article = img.closest('.article');
@@ -223,12 +253,20 @@ function initImageEditMode() {
     ev.preventDefault();
     const artIndex = parseInt(article.dataset.art ?? (article.id || '').replace('art-', ''), 10);
     if (isNaN(artIndex)) return;
-    window.parent.postMessage({
-      quiosco: 'remove-image',
+    const src = img.getAttribute('src') || '';
+    // nth: hay artículos con la misma imagen repetida — se marca ESA copia
+    const twins = [...document.querySelectorAll(`.article[data-art="${artIndex}"] img`)]
+      .filter(i => (i.getAttribute('src') || '') === src && !i.closest('figure.lead'));
+    marks.push({
+      type: 'img',
       art: artIndex,
-      src: img.getAttribute('src') || '',
-      isLead: !!img.closest('figure.lead')
-    }, '*');
+      src,
+      isLead: !!img.closest('figure.lead'),
+      nth: Math.max(0, twins.indexOf(img)),
+      el: img
+    });
+    img.classList.add('trim-marked');
+    sendTrimCount();
   });
 
   // Selección de texto → quitar los bloques (párrafos, títulos…) tocados.
@@ -266,12 +304,18 @@ function initImageEditMode() {
     const blocks = candidates.filter(el => !candidates.some(o => o !== el && o.contains(el)));
     if (!blocks.length) return;
 
-    window.parent.postMessage({
-      quiosco: 'remove-text',
-      art: artIndex,
-      texts: blocks.map(b => b.textContent.replace(/\s+/g, ' ').trim().slice(0, 400))
-    }, '*');
+    blocks.forEach(b => {
+      if (marks.some(m => m.el === b)) return;
+      marks.push({
+        type: 'text',
+        art: artIndex,
+        text: b.textContent.replace(/\s+/g, ' ').trim().slice(0, 400),
+        el: b
+      });
+      b.classList.add('trim-marked');
+    });
     sel.removeAllRanges();
+    sendTrimCount();
   });
 }
 
@@ -294,6 +338,8 @@ async function main() {
   let font = qp.get('font') || s.font || 'clasica';
   font = FONT_ALIASES[font] || font;
   if (font !== 'clasica') document.documentElement.dataset.font = font;
+  const align = qp.get('align') || s.align || 'justificado';
+  if (align === 'izquierda') document.documentElement.dataset.align = 'izquierda';
   const globalCols = Math.min(4, Math.max(2, parseInt(qp.get('cols') || s.columns, 10) || 2));
   // Acabado «caballete»: contraportada al final y total de páginas múltiplo de 4
   const saddle = (qp.get('finish') || s.finish || 'caballete') === 'caballete';

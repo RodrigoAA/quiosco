@@ -24,7 +24,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'finish', 'backstyle', 'coverImage'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'finish', 'backstyle', 'coverImage'];
 
 function loadMag() {
   try {
@@ -76,6 +76,7 @@ function bindSettings() {
   if (!mag.settings.columns) mag.settings.columns = '2';
   if (!mag.settings.finish) mag.settings.finish = 'caballete';
   if (!mag.settings.backstyle) mag.settings.backstyle = 'raya';
+  if (!mag.settings.align) mag.settings.align = 'justificado';
 
   for (const f of SETTING_FIELDS) {
     const input = $('#s-' + f);
@@ -291,7 +292,6 @@ function initImageRemoval() {
   btn.addEventListener('click', () => {
     imgEditOn = !imgEditOn;
     btn.classList.toggle('active', imgEditOn);
-    $('#imgEditHint').classList.toggle('hidden', !imgEditOn);
     syncPreviewState();
   });
 
@@ -299,61 +299,76 @@ function initImageRemoval() {
 
   window.addEventListener('message', ev => {
     const d = ev.data;
-    if (!d || (d.quiosco !== 'remove-image' && d.quiosco !== 'remove-text')) return;
-    const included = mag.articles.filter(a => a.included !== false);
-    const article = included[d.art];
-    if (!article) return;
+    if (!d) return;
 
-    if (d.quiosco === 'remove-image') {
+    if (d.quiosco === 'trim-count') {
+      status(d.n ? `${d.n} recorte(s) marcados — pulsa ✂ otra vez para aplicarlos` : '');
+      return;
+    }
+    if (d.quiosco !== 'apply-trims' || !Array.isArray(d.items) || !d.items.length) return;
+
+    const included = mag.articles.filter(a => a.included !== false);
+    const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
+    const groups = new Map();
+    for (const it of d.items) {
+      const article = included[it.art];
+      if (!article) continue;
+      if (!groups.has(article)) groups.set(article, []);
+      groups.get(article).push(it);
+    }
+
+    let applied = 0;
+    for (const [article, items] of groups) {
       pushUndo(article);
-      if (d.isLead) {
-        article.leadImage = '';
-      } else {
-        const doc = new DOMParser().parseFromString(article.content, 'text/html');
-        const img = [...doc.images].find(i => i.getAttribute('src') === d.src);
-        if (img) {
-          // En galerías (un figure con varias imágenes) se quita solo la pulsada
+      let appliedHere = 0;
+      const doc = new DOMParser().parseFromString(article.content, 'text/html');
+      for (const it of items) {
+        if (it.type === 'img') {
+          if (it.isLead) {
+            article.leadImage = '';
+            appliedHere++;
+            continue;
+          }
+          // Con imágenes duplicadas se borra exactamente la copia marcada (nth)
+          const twins = [...doc.images].filter(i => i.getAttribute('src') === it.src);
+          const img = twins[it.nth] || twins[0];
+          if (!img) {
+            if (article.leadImage === it.src) {
+              article.leadImage = '';
+              appliedHere++;
+            }
+            continue;
+          }
           const fig = img.closest('figure');
           if (fig && fig.querySelectorAll('img').length === 1) fig.remove();
           else (img.closest('picture') || img).remove();
-          article.content = doc.body.innerHTML;
-        } else if (article.leadImage === d.src) {
-          article.leadImage = '';
-        } else {
-          undoStack.pop();
-          if (!undoStack.length) $('#undoBtn').classList.add('hidden');
-          status('No se encontró esa imagen en el artículo', true);
-          return;
+          appliedHere++;
+        } else if (it.type === 'text') {
+          const target = norm(it.text || '');
+          if (target.length < 3) continue;
+          const matches = [...doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, figcaption')]
+            .filter(el => norm(el.textContent).includes(target));
+          if (!matches.length) continue;
+          matches.sort((a, b) => a.textContent.length - b.textContent.length);
+          matches[0].remove();
+          appliedHere++;
         }
       }
-      status(`Imagen quitada de «${article.title}» ✓ — ↩ Deshacer si no era esa`);
-      scheduleSave();
-      return;
+      if (appliedHere) {
+        doc.body.querySelectorAll('ul, ol').forEach(l => { if (!l.querySelector('li')) l.remove(); });
+        article.content = doc.body.innerHTML;
+        applied += appliedHere;
+      } else {
+        undoStack.pop();
+        if (!undoStack.length) $('#undoBtn').classList.add('hidden');
+      }
     }
 
-    // remove-text: quita los bloques cuyo texto coincida (el más pequeño que encaje)
-    if (!Array.isArray(d.texts) || !d.texts.length) return;
-    const doc = new DOMParser().parseFromString(article.content, 'text/html');
-    const norm = s => s.toLowerCase().replace(/\s+/g, ' ').trim();
-    let removed = 0;
-    for (const t of d.texts) {
-      const target = norm(t);
-      if (target.length < 3) continue;
-      const matches = [...doc.body.querySelectorAll('p, h1, h2, h3, h4, h5, h6, li, blockquote, pre, table, figcaption')]
-        .filter(el => norm(el.textContent).includes(target));
-      if (!matches.length) continue;
-      matches.sort((a, b) => a.textContent.length - b.textContent.length);
-      matches[0].remove();
-      removed++;
-    }
-    doc.body.querySelectorAll('ul, ol').forEach(l => { if (!l.querySelector('li')) l.remove(); });
-    if (removed) {
-      pushUndo(article);
-      article.content = doc.body.innerHTML;
-      status(`${removed} bloque(s) de texto quitados de «${article.title}» ✓ — ↩ Deshacer si no era eso`);
+    if (applied) {
+      status(`${applied} recorte(s) aplicados ✓ — ↩ Deshacer si hace falta`);
       scheduleSave();
     } else {
-      status('No se encontró ese texto en el artículo', true);
+      status('No se pudo aplicar ningún recorte', true);
     }
   });
 

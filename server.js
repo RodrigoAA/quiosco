@@ -29,6 +29,7 @@ const DEFAULT_MAGAZINE = {
     accent: '#b3402a',
     font: 'clasica',
     columns: '2',
+    align: 'justificado',
     finish: 'caballete',
     backstyle: 'raya',
     coverImage: ''

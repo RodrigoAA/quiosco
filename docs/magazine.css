@@ -444,6 +444,9 @@ figure.lead img { width: 100%; display: block; }
   text-align: left;
 }
 
+/* Alineación del cuerpo: justificado (por defecto) o bandera a la izquierda */
+html[data-align='izquierda'] .article-body { text-align: left; }
+
 /* ---------- Variantes de columnas (2 es la base) ----------
    A más columnas, columna más estrecha: se baja el cuerpo y,
    a 4, se quita el justificado para evitar ríos de espacios. */
