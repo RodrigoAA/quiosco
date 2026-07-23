@@ -437,25 +437,34 @@ function bindExport() {
   const btn = $('#exportBtn');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
-    btn.textContent = 'Generando PDF…';
+    btn.textContent = 'Generando…';
     status('Generando PDF (puede tardar un poco si hay muchas imágenes)…');
     try {
       const r = await fetch('/api/export-pdf', { method: 'POST' });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Error desconocido');
-      status(`PDF listo (${data.kb} KB) — descargado; copia maestra en quiosco\\exports`);
-      const link = $('#exportLink');
-      link.href = data.url;
-      link.download = data.name;
-      link.textContent = 'Volver a descargar';
-      link.classList.remove('hidden');
-      link.click(); // descarga automática al terminar
+      const a = document.createElement('a');
+      a.href = data.url;
+      a.download = data.name;
+      a.click(); // descarga automática al terminar
+      status(`PDF descargado (${data.kb} KB) — copia maestra en quiosco\\exports`);
     } catch (e) {
-      status('Error al exportar: ' + e.message, true);
+      status('Error al generar el PDF: ' + e.message, true);
     } finally {
       btn.disabled = false;
-      btn.textContent = 'Exportar PDF';
+      btn.textContent = 'Descargar PDF';
     }
+  });
+
+  // Imprimir la previsualización (el iframe ya tiene la maqueta lista)
+  $('#printBtn').addEventListener('click', () => {
+    const w = $('#preview').contentWindow;
+    if (!w || !w.__pagedStatus || w.__pagedStatus.done !== true) {
+      status('Espera a que la previsualización termine de maquetar', true);
+      return;
+    }
+    w.focus();
+    w.print();
   });
 }
 

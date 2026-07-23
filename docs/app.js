@@ -392,6 +392,20 @@ async function initPalette() {
   $('#paletteRow').classList.remove('hidden');
 }
 
+/* ---------- Imprimir la previsualización ---------- */
+
+function bindPrint() {
+  $('#printBtn').addEventListener('click', () => {
+    const w = $('#preview').contentWindow;
+    if (!w || !w.__pagedStatus || w.__pagedStatus.done !== true) {
+      status('Espera a que la previsualización termine de maquetar', true);
+      return;
+    }
+    w.focus();
+    w.print();
+  });
+}
+
 /* ---------- Importar / exportar JSON ---------- */
 
 function bindJsonTools() {
@@ -442,6 +456,7 @@ function init() {
   bindAddForm();
   bindPreviewTools();
   bindJsonTools();
+  bindPrint();
   initImageRemoval();
   initPalette();
   status('Listo');
