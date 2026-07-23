@@ -173,14 +173,9 @@ img { max-width: 100%; }
   box-sizing: border-box;
   position: relative;
 }
-/* Faldón: cubre el milímetro de holgura para que el color llegue al borde */
-.backcover.area::after {
-  content: '';
-  position: absolute;
-  left: 0;
-  right: 0;
-  bottom: -2.5mm;
-  height: 5mm;
+/* El milímetro de holgura se cubre pintando la página misma que genera
+   Paged.js (nada se sale de la caja: sin hojas extra al imprimir) */
+.pagedjs_contraportada-full_page {
   background: var(--accent);
 }
 .backcover.area .bc-rule { background: #ffffff; }
