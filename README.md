@@ -22,6 +22,11 @@ npm start     # abre http://localhost:4321
 
 ## Cómo se usa
 
+El sidebar va ordenado por frecuencia de uso — arriba lo diario (Número,
+Artículos, Suscripciones) y plegado al fondo lo que se configura una vez
+(Revista, Diseño, Desde el móvil); cada panel recuerda si lo dejaste
+abierto o cerrado.
+
 1. **Añadir artículos**: pega una URL y pulsa Añadir. El servidor descarga la
    página y extrae el artículo limpio con Readability (sin widgets de
    suscripción, botones ni embeds). También puedes añadir en lote desde la
@@ -62,6 +67,13 @@ todas tus fuentes, ordenados por fecha, con **＋ para añadir** al número
 actual y **✓** en los que ya están en algún número (aunque los añadieras con
 otra URL: se normalizan los parámetros de tracking). Los feeds viven en
 `data/feeds.json`.
+
+**Importar todas tus suscripciones de Substack en un paso**: Substack no
+tiene API pública, pero estando logueado expone tu lista en
+`substack.com/api/v1/subscriptions`. Abre esa URL en el navegador, copia el
+JSON completo y pégalo en «Importar todas mis suscripciones de Substack…»
+del panel: se añaden todas las fuentes de golpe (saltando las ya seguidas y
+avisando de las que no tengan feed). No se guardan credenciales ni cookies.
 
 ### Añadir desde el móvil
 
