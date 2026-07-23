@@ -209,6 +209,48 @@ function bindAddForm() {
   });
 }
 
+/* ---------- Bandeja del móvil (bot de Telegram) ---------- */
+
+async function bindTelegram() {
+  const stEl = $('#tgStatus');
+  const refresh = async () => {
+    try {
+      const s = await (await fetch('/api/telegram')).json();
+      if (s.configured) {
+        stEl.textContent = `Conectado a @${s.username} — comparte enlaces al bot desde X o Gmail`
+          + ` (${s.added} añadidos)`
+          + (s.bound ? '' : '. Escríbele un primer mensaje para vincularlo.');
+        $('#tgForm').classList.add('hidden');
+      } else {
+        const info = await (await fetch('/api/info')).json().catch(() => null);
+        const lan = info && info.lan && info.lan.length ? ` En la misma WiFi también: ${info.lan[0]}` : '';
+        stEl.textContent = 'Crea un bot en Telegram (@BotFather → /newbot) y pega su token: '
+          + 'podrás compartirle artículos desde el móvil.' + lan;
+      }
+    } catch { /* servidor no disponible */ }
+  };
+
+  $('#tgSave').addEventListener('click', async () => {
+    const token = $('#tgToken').value.trim();
+    if (!token) return;
+    const r = await fetch('/api/telegram', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ token })
+    });
+    const data = await r.json();
+    if (!r.ok) {
+      status('Telegram: ' + (data.error || 'error'), true);
+      return;
+    }
+    status(`Bot @${data.username} conectado ✓ — mándale un primer mensaje desde tu Telegram`);
+    $('#tgToken').value = '';
+    refresh();
+  });
+
+  refresh();
+}
+
 /* ---------- Vista completa (misma pestaña, sin panel lateral) ---------- */
 
 function setFocusMode(on) {
@@ -676,6 +718,7 @@ async function init() {
   bindFocusMode();
   bindTopNav();
   initImageRemoval();
+  bindTelegram();
   await initIssues();
   initPalette();
 }

@@ -1,4 +1,5 @@
 import express from 'express';
+import os from 'node:os';
 import path from 'node:path';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
@@ -365,6 +366,150 @@ app.get('/api/img', async (req, res) => {
   }
 });
 
+/* ================= Bandeja del móvil: bot de Telegram =================
+   Compartes un enlace al bot desde el móvil (X, Gmail…) y Quiosco lo extrae
+   y lo añade al número actual. Telegram hace de cola: si el PC está apagado,
+   los mensajes esperan hasta el siguiente arranque. El token vive en
+   data/telegram.json (fuera del repo). */
+
+const TG_FILE = path.join(DATA_DIR, 'telegram.json');
+let tgState = null;
+let tgRunning = false;
+
+async function tgApi(method, params = {}) {
+  const r = await fetch(`https://api.telegram.org/bot${tgState.token}/${method}`, {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify(params),
+    signal: AbortSignal.timeout(65000)
+  });
+  return r.json();
+}
+
+async function saveTg() {
+  await fs.mkdir(DATA_DIR, { recursive: true });
+  await fs.writeFile(TG_FILE, JSON.stringify(tgState, null, 2), 'utf8');
+}
+
+function urlsInMessage(msg) {
+  const out = new Set();
+  const text = msg.text || msg.caption || '';
+  for (const e of [...(msg.entities || []), ...(msg.caption_entities || [])]) {
+    if (e.type === 'url') out.add(text.substr(e.offset, e.length));
+    if (e.type === 'text_link' && e.url) out.add(e.url);
+  }
+  for (const m of text.matchAll(/https?:\/\/\S+/g)) {
+    out.add(m[0].replace(/[)\],.]+$/, ''));
+  }
+  return [...out];
+}
+
+async function tgLoop() {
+  if (tgRunning) return;
+  tgRunning = true;
+  console.log('Bandeja Telegram activa: esperando enlaces del móvil…');
+  while (tgState && tgState.token) {
+    try {
+      const res = await tgApi('getUpdates', { timeout: 50, offset: tgState.offset || 0 });
+      if (!res.ok) {
+        await new Promise(r => setTimeout(r, 10000));
+        continue;
+      }
+      for (const up of res.result) {
+        tgState.offset = up.update_id + 1;
+        const msg = up.message;
+        if (!msg) continue;
+        // El primer chat que escriba queda vinculado; el resto se ignora
+        if (!tgState.chatId) tgState.chatId = msg.chat.id;
+        if (msg.chat.id !== tgState.chatId) continue;
+
+        const urls = urlsInMessage(msg);
+        if (!urls.length) {
+          await tgApi('sendMessage', { chat_id: msg.chat.id, text: 'No veo ninguna URL en ese mensaje 🤔' });
+          continue;
+        }
+        for (const url of urls) {
+          try {
+            const article = await extractAny(url);
+            const mag = await loadMagazine();
+            mag.articles.push({ id: crypto.randomUUID(), included: true, ...article });
+            await saveMagazine(mag);
+            tgState.added = (tgState.added || 0) + 1;
+            await tgApi('sendMessage', {
+              chat_id: msg.chat.id,
+              text: `✓ «${article.title}» añadido (${mag.settings.issue || 'revista'}, ${mag.articles.length} artículos)`
+            });
+          } catch (e) {
+            await tgApi('sendMessage', { chat_id: msg.chat.id, text: `✗ No pude añadir ${url}\n${e.message}` });
+          }
+        }
+      }
+      if (res.result.length) await saveTg();
+    } catch {
+      await new Promise(r => setTimeout(r, 5000));
+    }
+  }
+  tgRunning = false;
+}
+
+app.get('/api/telegram', (_req, res) => {
+  if (!tgState || !tgState.token) return res.json({ configured: false });
+  res.json({
+    configured: true,
+    username: tgState.username || null,
+    bound: !!tgState.chatId,
+    added: tgState.added || 0
+  });
+});
+
+app.post('/api/telegram', async (req, res) => {
+  const { token } = req.body || {};
+  if (!token || !/^\d+:[\w-]+$/.test(token)) {
+    return res.status(400).json({ error: 'Eso no parece un token de BotFather (formato 123456:ABC…)' });
+  }
+  let check = null;
+  try {
+    check = await (await fetch(`https://api.telegram.org/bot${token}/getMe`, {
+      signal: AbortSignal.timeout(15000)
+    })).json();
+  } catch { /* sin red o Telegram caído */ }
+  if (!check || !check.ok) return res.status(400).json({ error: 'Telegram rechaza ese token' });
+  tgState = { token, username: check.result.username, offset: 0, added: 0 };
+  await saveTg();
+  tgLoop();
+  res.json({ ok: true, username: check.result.username });
+});
+
+// Página mínima para añadir desde el móvil en la misma WiFi (sin bot)
+app.get('/movil', (_req, res) => {
+  res.send(`<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Quiosco — añadir</title></head>
+<body style="font-family:'Segoe UI',system-ui,sans-serif;background:#f4f2ee;margin:0;padding:28px 18px">
+<h2 style="margin:0 0 4px">🗞️ Quiosco</h2>
+<p style="color:#8b857b;font-size:14px;margin:0 0 18px">Pega la URL del artículo y se añadirá al número actual.</p>
+<form action="/add" style="display:flex;flex-direction:column;gap:12px">
+  <input name="url" type="url" required placeholder="https://…"
+    style="padding:14px;font-size:16px;border:1px solid #d9d4ca;border-radius:10px">
+  <button style="padding:14px;font-size:16px;font-weight:600;color:#fff;background:#b3402a;border:none;border-radius:10px">Añadir a la revista</button>
+</form>
+</body></html>`);
+});
+
+function lanAddresses() {
+  const out = [];
+  for (const list of Object.values(os.networkInterfaces())) {
+    for (const iface of list || []) {
+      if (iface.family === 'IPv4' && !iface.internal) out.push(iface.address);
+    }
+  }
+  return out;
+}
+
+app.get('/api/info', (_req, res) => {
+  res.json({ lan: lanAddresses().map(ip => `http://${ip}:${PORT}/movil`) });
+});
+
 /* ================= Posts e hilos de X (Twitter) =================
    x.com es una SPA: el HTML llega vacío a un servidor. Usamos dos vías
    públicas: la API de FxTwitter (texto completo, fotos, autor, cadena de
@@ -513,6 +658,13 @@ async function extractXThread(id, originalUrl) {
   };
 }
 
-app.listen(PORT, () => {
+app.listen(PORT, async () => {
   console.log(`Quiosco funcionando en http://localhost:${PORT}`);
+  for (const ip of lanAddresses()) {
+    console.log(`  · desde el móvil (misma WiFi): http://${ip}:${PORT}/movil`);
+  }
+  try {
+    tgState = JSON.parse(await fs.readFile(TG_FILE, 'utf8'));
+    if (tgState && tgState.token) tgLoop();
+  } catch { /* sin bandeja Telegram configurada */ }
 });

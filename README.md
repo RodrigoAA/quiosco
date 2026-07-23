@@ -53,6 +53,22 @@ en cualquier artículo lo añade al número actual, con ✓/✗ sobre el icono.
 Instalación: `chrome://extensions` → «Modo de desarrollador» → «Cargar
 descomprimida» → carpeta `quiosco/extension`. Requiere Quiosco arrancado.
 
+### Añadir desde el móvil
+
+Los artículos se suelen descubrir en el móvil (app de X, newsletters en
+Gmail). Dos vías:
+
+- **Bot de Telegram (recomendada)**: en Telegram habla con **@BotFather** →
+  `/newbot` → copia el token en el panel «Desde el móvil» del editor →
+  mándale un primer mensaje al bot para vincularlo. Desde entonces,
+  **Compartir → Telegram → tu bot** desde cualquier app añade el artículo al
+  número actual, y el bot responde ✓/✗. Telegram hace de cola: puedes
+  compartir con el PC apagado y se importa todo al arrancar Quiosco. El bot
+  queda vinculado al primer chat que le escriba (el resto se ignora); el
+  token vive en `data/telegram.json`, fuera del repo.
+- **Misma WiFi**: abre `http://<ip-del-pc>:4321/movil` en el móvil (la URL
+  exacta sale al arrancar el servidor y en el panel) y pega la URL.
+
 ### Posts e hilos de X
 
 Pega cualquier URL `x.com/…/status/…`. Como X no sirve HTML a servidores, se
