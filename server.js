@@ -302,9 +302,10 @@ function extractArticle(html, url) {
   // Entradillas vacías tipo "…" no aportan nada
   let excerpt = (parsed.excerpt || '').replace(/\s+/g, ' ').trim().slice(0, 300);
   if (/^[.…\s·—-]*$/.test(excerpt)) excerpt = '';
-  // …ni las que solo repiten el primer párrafo del artículo
+  // …ni las que solo repiten el arranque del artículo (aunque el cuerpo
+  // empiece con un rótulo tipo «La Reflexión» antes del texto duplicado)
   const squash = s => normalize(s).replace(/\s+/g, '');
-  if (excerpt && squash(cdoc.body.textContent).startsWith(squash(excerpt).replace(/[.…]+$/, '').slice(0, 150))) {
+  if (excerpt && squash(cdoc.body.textContent).slice(0, 600).includes(squash(excerpt).replace(/[.…]+$/, '').slice(0, 150))) {
     excerpt = '';
   }
 

@@ -95,7 +95,7 @@
     let excerpt = (parsed.excerpt || '').replace(/\s+/g, ' ').trim().slice(0, 300);
     if (/^[.…\s·—-]*$/.test(excerpt)) excerpt = '';
     const squash = s => normalize(s).replace(/\s+/g, '');
-    if (excerpt && squash(cdoc.body.textContent).startsWith(squash(excerpt).replace(/[.…]+$/, '').slice(0, 150))) {
+    if (excerpt && squash(cdoc.body.textContent).slice(0, 600).includes(squash(excerpt).replace(/[.…]+$/, '').slice(0, 150))) {
       excerpt = '';
     }
 
