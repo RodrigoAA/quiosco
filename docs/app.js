@@ -233,12 +233,15 @@ function pushUndo(article) {
   $('#undoBtn').classList.remove('hidden');
 }
 
+let focusOn = false;
+
 function syncPreviewState() {
   try {
     $('#preview').contentWindow.postMessage({
       quiosco: 'view',
       imgEdit: imgEditOn,
-      zoom: Number($('#zoom').value) / 100
+      focus: focusOn,
+      zoom: focusOn ? 1 : Number($('#zoom').value) / 100
     }, '*');
   } catch { /* iframe aún cargando */ }
 }
@@ -418,11 +421,21 @@ async function initPalette() {
 
 /* ---------- Vista completa (misma pestaña, sin panel lateral) ---------- */
 
+function setFocusMode(on) {
+  focusOn = on;
+  document.body.classList.toggle('focus', on);
+  $('#preview').style.zoom = on ? 1 : Number($('#zoom').value) / 100;
+  syncPreviewState();
+}
+
 function bindFocusMode() {
-  const btn = $('#focusBtn');
-  btn.addEventListener('click', () => {
-    const on = document.body.classList.toggle('focus');
-    btn.textContent = on ? '✎ Volver al editor' : '⛶ Vista completa';
+  $('#focusBtn').addEventListener('click', () => setFocusMode(true));
+  $('#focusExit').addEventListener('click', () => setFocusMode(false));
+  window.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape' && focusOn) setFocusMode(false);
+  });
+  window.addEventListener('message', ev => {
+    if (ev.data && ev.data.quiosco === 'exit-focus' && focusOn) setFocusMode(false);
   });
 }
 

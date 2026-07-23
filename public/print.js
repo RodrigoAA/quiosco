@@ -125,10 +125,16 @@ function initImageEditMode() {
   window.addEventListener('message', ev => {
     if (ev.data && ev.data.quiosco === 'view') {
       document.body.classList.toggle('img-edit', !!ev.data.imgEdit);
+      document.body.classList.toggle('focusfull', !!ev.data.focus);
       // La toolbar mini no debe encogerse con el zoom de la previsualización
       const z = Number(ev.data.zoom);
       document.getElementById('toolbar').style.zoom = z > 0 ? String(1 / z) : '';
     }
+  });
+
+  // Esc con el foco dentro del iframe: salir de la vista completa
+  window.addEventListener('keydown', ev => {
+    if (ev.key === 'Escape') window.parent.postMessage({ quiosco: 'exit-focus' }, '*');
   });
 
   document.getElementById('pages').addEventListener('click', ev => {

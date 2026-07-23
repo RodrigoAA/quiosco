@@ -4,6 +4,7 @@
 <meta charset="utf-8">
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <title>Quiosco — editor de revista</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23b3402a'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/ui.css">
 </head>
 <body>
@@ -12,7 +13,7 @@
     <span id="status" class="status"></span>
     <div class="actions">
       <button id="focusBtn" class="btn" type="button"
-        title="Oculta el panel lateral para revisar la revista a todo el ancho">⛶ Vista completa</button>
+        title="Oculta el editor para revisar la revista a pantalla completa (Esc para volver)">⛶ Vista completa</button>
       <button id="exportBtn" class="btn primary" type="button"
         title="Genera el PDF con el motor fiable del servidor y lo descarga (copia maestra en exports\)">Descargar PDF</button>
       <button id="printBtn" class="btn" type="button"
@@ -20,17 +21,18 @@
     </div>
   </header>
 
+  <button id="focusExit" type="button" title="Volver al editor (Esc)">✎ Volver al editor</button>
+
   <main>
     <aside id="sidebar">
       <section class="panel">
         <h2>Número</h2>
         <div class="issue-row">
-          <select id="issueSelect"></select>
-          <button id="newIssue" class="btn" type="button" title="Empezar un número nuevo">＋</button>
+          <select id="issueSelect" title="Cada número guarda su propia selección de artículos"></select>
+          <button id="newIssue" class="btn" type="button"
+            title="Nuevo número: hereda el diseño y empieza sin artículos">＋</button>
           <button id="delIssue" class="btn" type="button" title="Eliminar este número">🗑</button>
         </div>
-        <p class="tip">Cada número guarda su propia selección de artículos.
-        El nuevo hereda el diseño (tipografía, color, columnas, acabado).</p>
       </section>
 
       <section class="panel">
@@ -49,18 +51,16 @@
             <input id="s-date" type="text" placeholder="auto: mes actual">
           </label>
         </div>
-        <div class="row2">
-          <label>Color de acento
-            <input id="s-accent" type="color">
-          </label>
-          <label>Columnas
-            <select id="s-columns">
-              <option value="2">2 — revista (recomendado)</option>
-              <option value="3">3 — prensa</option>
-              <option value="4">4 — boletín compacto</option>
-            </select>
-          </label>
-        </div>
+        <label>Imagen de portada (URL)
+          <input id="s-coverImage" type="text" placeholder="vacío = primera imagen disponible">
+        </label>
+      </section>
+
+      <section class="panel">
+        <h2>Diseño</h2>
+        <label>Color de acento
+          <input id="s-accent" type="color">
+        </label>
         <div id="paletteRow" class="palette-row hidden">
           <span class="palette-label">De la portada:</span>
           <span id="swatches"></span>
@@ -77,10 +77,11 @@
           </select>
         </label>
         <div class="row2">
-          <label>Acabado
-            <select id="s-finish">
-              <option value="caballete">Grapada — contraportada y múltiplo de 4</option>
-              <option value="normal">Hojas sueltas / espiral — sin contraportada</option>
+          <label>Columnas
+            <select id="s-columns">
+              <option value="2">2 — revista</option>
+              <option value="3">3 — prensa</option>
+              <option value="4">4 — boletín</option>
             </select>
           </label>
           <label>Contraportada
@@ -90,51 +91,44 @@
             </select>
           </label>
         </div>
-        <label>Imagen de portada (URL)
-          <input id="s-coverImage" type="text" placeholder="vacío = primera imagen disponible">
+        <label>Acabado
+          <select id="s-finish">
+            <option value="caballete">Grapada — contraportada y múltiplo de 4</option>
+            <option value="normal">Hojas sueltas / espiral — sin contraportada</option>
+          </select>
         </label>
       </section>
 
       <section class="panel">
         <h2>Artículos</h2>
         <form id="addForm">
-          <input id="addUrl" type="url" placeholder="https://… (Substack, blog o post/hilo de X)" required>
+          <input id="addUrl" type="url" placeholder="https://…" required
+            title="Substack, blog o post/hilo de X. Para un hilo: pega cualquier post; si no está en ThreadReaderApp, pega el último para tenerlo completo">
           <button id="addBtn" class="btn primary" type="submit">Añadir</button>
         </form>
         <p id="addError" class="error hidden"></p>
         <ul id="articleList"></ul>
-        <p class="tip">Marca/desmarca la casilla para incluir un artículo sin borrarlo.
-        Con ✎ puedes retocar título, autor y entradilla.</p>
-        <p class="tip">Con enlaces de X: pega la URL de cualquier post del hilo. Si el hilo
-        está en ThreadReaderApp se recupera entero; si no, se recupera desde el principio
-        hasta el post pegado (pega el último para tenerlo completo).</p>
-      </section>
-
-      <section class="panel">
-        <h2>Añadir con un clic</h2>
-        <p class="tip">Arrastra este botón a la barra de marcadores del navegador. Después,
-        estando en cualquier artículo, púlsalo y se añadirá al número actual
-        (Quiosco tiene que estar arrancado).</p>
-        <a id="bookmarklet" class="btn" href="#">➕ A Quiosco</a>
+        <div class="bm-row">
+          <a id="bookmarklet" class="btn" href="#"
+            title="Arrástrame a la barra de marcadores. Después, en cualquier artículo, púlsame y se añadirá al número actual (con Quiosco arrancado)">➕ A Quiosco</a>
+          <span class="tip">← a marcadores: añade artículos con un clic</span>
+        </div>
       </section>
     </aside>
 
     <section id="previewWrap">
       <div class="preview-tools">
-        <span>Previsualización</span>
-        <label>Zoom
-          <select id="zoom">
-            <option value="50">50 %</option>
-            <option value="65" selected>65 %</option>
-            <option value="80">80 %</option>
-            <option value="100">100 %</option>
-          </select>
-        </label>
+        <select id="zoom" title="Zoom de la previsualización">
+          <option value="50">50 %</option>
+          <option value="65" selected>65 %</option>
+          <option value="80">80 %</option>
+          <option value="100">100 %</option>
+        </select>
         <button id="refresh" class="btn" type="button">Actualizar</button>
         <button id="imgEditBtn" class="btn" type="button"
           title="Modo edición: pulsa una imagen para quitarla, o selecciona texto para eliminar esos párrafos">✂ Recortar</button>
         <button id="undoBtn" class="btn hidden" type="button" title="Deshacer el último recorte">↩ Deshacer</button>
-        <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto: se quitan al instante (↩ Deshacer si te pasas)</span>
+        <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto: se quitan al instante</span>
       </div>
       <iframe id="preview" src="/print.html" title="Previsualización de la revista"></iframe>
     </section>

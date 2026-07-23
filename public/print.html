@@ -3,6 +3,7 @@
 <head>
 <meta charset="utf-8">
 <title>Revista — vista de impresión</title>
+<link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 64 64'%3E%3Crect width='64' height='64' rx='12' fill='%23b3402a'/%3E%3Ctext x='32' y='46' font-family='Georgia,serif' font-size='40' font-weight='bold' fill='white' text-anchor='middle'%3EQ%3C/text%3E%3C/svg%3E">
 <link rel="stylesheet" href="/fonts.css">
 <style>
   /* Estilos de la interfaz (NO pasan por Paged.js: solo pantalla) */
@@ -70,16 +71,16 @@
       font-size: 15px;
     }
   }
-  /* Embebido en el editor: solo el contador (los botones ya están arriba) */
-  body.embedded #toolbar {
+  /* Embebido en el editor: solo el contador (los botones ya están arriba).
+     En vista completa (focusfull) se muestra la toolbar entera. */
+  body.embedded:not(.focusfull) #toolbar {
     padding: 5px 10px;
     font-size: 11px;
     gap: 0;
     opacity: 0.92;
   }
-  body.embedded #tb-download,
-  body.embedded #tb-print,
-  body.embedded #tb-hint { display: none; }
+  body.embedded:not(.focusfull) #tb-download,
+  body.embedded:not(.focusfull) #tb-print { display: none; }
 
   /* Modo «quitar imágenes» (activado desde el editor) */
   body.img-edit .pagedjs_page .article img {
