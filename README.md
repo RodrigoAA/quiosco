@@ -11,6 +11,13 @@ columnas con capitular y folio en el pie.
   y por artículo (el cuerpo de letra se ajusta solo).
 - En la vista de impresión puedes probar sin guardar con
   `?font=editorial&cols=3` en la URL.
+- **Acabado grapado**: contraportada con colofón y relleno automático de
+  blancas hasta múltiplo de 4 (desactivable en «Acabado» para espiral).
+- **Números**: cada revista vive en `data/issues/issue-N.json`. Selector en
+  el editor para cambiar, crear (hereda el diseño) o eliminar números.
+- **Bookmarklet «➕ A Quiosco»**: arrastra el botón del editor a la barra de
+  marcadores; desde cualquier artículo lo añade al número actual vía
+  `GET /add?url=…` (requiere el servidor arrancado).
 
 ## Versión web (GitHub Pages)
 

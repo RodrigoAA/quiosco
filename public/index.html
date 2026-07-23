@@ -20,6 +20,17 @@
   <main>
     <aside id="sidebar">
       <section class="panel">
+        <h2>Número</h2>
+        <div class="issue-row">
+          <select id="issueSelect"></select>
+          <button id="newIssue" class="btn" type="button" title="Empezar un número nuevo">＋</button>
+          <button id="delIssue" class="btn" type="button" title="Eliminar este número">🗑</button>
+        </div>
+        <p class="tip">Cada número guarda su propia selección de artículos.
+        El nuevo hereda el diseño (tipografía, color, columnas, acabado).</p>
+      </section>
+
+      <section class="panel">
         <h2>Revista</h2>
         <label>Título
           <input id="s-title" type="text">
@@ -80,6 +91,14 @@
         <p class="tip">Con enlaces de X: pega la URL de cualquier post del hilo. Si el hilo
         está en ThreadReaderApp se recupera entero; si no, se recupera desde el principio
         hasta el post pegado (pega el último para tenerlo completo).</p>
+      </section>
+
+      <section class="panel">
+        <h2>Añadir con un clic</h2>
+        <p class="tip">Arrastra este botón a la barra de marcadores del navegador. Después,
+        estando en cualquier artículo, púlsalo y se añadirá al número actual
+        (Quiosco tiene que estar arrancado).</p>
+        <a id="bookmarklet" class="btn" href="#">➕ A Quiosco</a>
       </section>
     </aside>
 

@@ -207,6 +207,55 @@ function bindPreviewTools() {
   $('#refresh').addEventListener('click', reloadPreview);
 }
 
+/* ---------- Números (issues) ---------- */
+
+async function initIssues() {
+  const issues = await (await fetch('/api/issues')).json();
+  const sel = $('#issueSelect');
+  sel.innerHTML = issues.map(i =>
+    `<option value="${esc(i.id)}" ${i.current ? 'selected' : ''}>${esc([i.issue, i.title].filter(Boolean).join(' — '))} (${i.count})</option>`
+  ).join('');
+
+  sel.addEventListener('change', async () => {
+    await fetch('/api/issues/select', {
+      method: 'POST',
+      headers: { 'content-type': 'application/json' },
+      body: JSON.stringify({ id: sel.value })
+    });
+    location.reload();
+  });
+
+  $('#newIssue').addEventListener('click', async () => {
+    const r = await fetch('/api/issues', { method: 'POST' });
+    if (r.ok) location.reload();
+    else status('Error al crear el número', true);
+  });
+
+  $('#delIssue').addEventListener('click', async () => {
+    if (issues.length < 2) {
+      status('No se puede eliminar el único número', true);
+      return;
+    }
+    const current = issues.find(i => i.current);
+    if (!confirm(`¿Eliminar «${[current.issue, current.title].filter(Boolean).join(' — ')}» y sus ${current.count} artículos? No se puede deshacer.`)) return;
+    const r = await fetch(`/api/issues/${encodeURIComponent(current.id)}`, { method: 'DELETE' });
+    if (r.ok) location.reload();
+    else status('Error al eliminar: ' + ((await r.json()).error || ''), true);
+  });
+}
+
+/* ---------- Bookmarklet ---------- */
+
+function initBookmarklet() {
+  // location.origin se fija ahora; location.href se evalúa en la página del artículo
+  $('#bookmarklet').href =
+    `javascript:void(window.open('${location.origin}/add?url='+encodeURIComponent(location.href),'quiosco','width=440,height=300'))`;
+  $('#bookmarklet').addEventListener('click', ev => {
+    ev.preventDefault();
+    status('Arrástralo a la barra de marcadores (no hace nada aquí)', false);
+  });
+}
+
 /* ---------- Exportar PDF ---------- */
 
 function bindExport() {
@@ -250,6 +299,8 @@ async function init() {
   bindAddForm();
   bindPreviewTools();
   bindExport();
+  initBookmarklet();
+  await initIssues();
   status('Listo');
 }
 

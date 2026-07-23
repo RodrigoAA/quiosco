@@ -35,24 +35,123 @@ const DEFAULT_MAGAZINE = {
   articles: []
 };
 
-async function loadMagazine() {
+/* ---------- Números (issues): un JSON por revista en data/issues/ ---------- */
+
+const ISSUES_DIR = path.join(DATA_DIR, 'issues');
+const STATE_FILE = path.join(DATA_DIR, 'state.json');
+
+// Crea el estado la primera vez, migrando el data/magazine.json antiguo
+// (que se conserva intacto como copia) a issues/issue-1.json.
+async function ensureState() {
   try {
-    return JSON.parse(await fs.readFile(DATA_FILE, 'utf8'));
+    return JSON.parse(await fs.readFile(STATE_FILE, 'utf8'));
+  } catch {
+    await fs.mkdir(ISSUES_DIR, { recursive: true });
+    let mag = null;
+    try { mag = JSON.parse(await fs.readFile(DATA_FILE, 'utf8')); } catch { /* no había */ }
+    if (!mag) mag = structuredClone(DEFAULT_MAGAZINE);
+    await fs.writeFile(path.join(ISSUES_DIR, 'issue-1.json'), JSON.stringify(mag, null, 2), 'utf8');
+    const state = { currentId: 'issue-1' };
+    await fs.writeFile(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+    return state;
+  }
+}
+
+async function setState(state) {
+  await fs.writeFile(STATE_FILE, JSON.stringify(state, null, 2), 'utf8');
+}
+
+function issueFile(id) {
+  return path.join(ISSUES_DIR, path.basename(String(id)) + '.json');
+}
+
+async function listIssues() {
+  const state = await ensureState();
+  const files = (await fs.readdir(ISSUES_DIR)).filter(f => f.endsWith('.json'));
+  const issues = [];
+  for (const f of files) {
+    try {
+      const id = f.slice(0, -5);
+      const stat = await fs.stat(path.join(ISSUES_DIR, f));
+      const m = JSON.parse(await fs.readFile(path.join(ISSUES_DIR, f), 'utf8'));
+      issues.push({
+        id,
+        title: m.settings?.title || '',
+        issue: m.settings?.issue || '',
+        count: Array.isArray(m.articles) ? m.articles.length : 0,
+        updatedAt: stat.mtimeMs,
+        current: id === state.currentId
+      });
+    } catch { /* fichero corrupto: se omite del listado */ }
+  }
+  const num = id => parseInt(id.replace(/\D+/g, ''), 10) || 0;
+  issues.sort((a, b) => num(a.id) - num(b.id));
+  return issues;
+}
+
+async function loadMagazine() {
+  const state = await ensureState();
+  try {
+    return JSON.parse(await fs.readFile(issueFile(state.currentId), 'utf8'));
   } catch {
     return structuredClone(DEFAULT_MAGAZINE);
   }
 }
 
 async function saveMagazine(mag) {
-  await fs.mkdir(DATA_DIR, { recursive: true });
+  const state = await ensureState();
   try {
-    await fs.copyFile(DATA_FILE, path.join(DATA_DIR, 'magazine.backup.json'));
+    await fs.copyFile(issueFile(state.currentId), path.join(DATA_DIR, 'magazine.backup.json'));
   } catch { /* primera vez: no hay nada que respaldar */ }
-  await fs.writeFile(DATA_FILE, JSON.stringify(mag, null, 2), 'utf8');
+  await fs.writeFile(issueFile(state.currentId), JSON.stringify(mag, null, 2), 'utf8');
 }
 
 app.get('/api/magazine', async (_req, res) => {
   res.json(await loadMagazine());
+});
+
+app.get('/api/issues', async (_req, res) => {
+  res.json(await listIssues());
+});
+
+// Nuevo número: hereda el diseño del actual, empieza sin artículos
+app.post('/api/issues', async (_req, res) => {
+  const issues = await listIssues();
+  const current = await loadMagazine();
+  const nextN = issues.reduce((max, i) => Math.max(max, parseInt(i.id.replace(/\D+/g, ''), 10) || 0), 0) + 1;
+  const id = `issue-${nextN}`;
+  const mag = {
+    settings: { ...current.settings, issue: `Nº ${nextN}`, date: '' },
+    articles: []
+  };
+  await fs.writeFile(issueFile(id), JSON.stringify(mag, null, 2), 'utf8');
+  await setState({ currentId: id });
+  res.json({ ok: true, id });
+});
+
+app.post('/api/issues/select', async (req, res) => {
+  const { id } = req.body || {};
+  try {
+    await fs.access(issueFile(id));
+  } catch {
+    return res.status(404).json({ error: 'Ese número no existe' });
+  }
+  await setState({ currentId: path.basename(String(id)) });
+  res.json({ ok: true });
+});
+
+app.delete('/api/issues/:id', async (req, res) => {
+  const id = path.basename(req.params.id);
+  const issues = await listIssues();
+  if (issues.length < 2) return res.status(400).json({ error: 'No se puede eliminar el único número' });
+  if (!issues.some(i => i.id === id)) return res.status(404).json({ error: 'Ese número no existe' });
+  await fs.rm(issueFile(id));
+  const state = await ensureState();
+  if (state.currentId === id) {
+    const remaining = issues.filter(i => i.id !== id);
+    await setState({ currentId: remaining[remaining.length - 1].id });
+  }
+  res.json({ ok: true });
 });
 
 app.put('/api/magazine', async (req, res) => {
@@ -64,40 +163,65 @@ app.put('/api/magazine', async (req, res) => {
   res.json({ ok: true });
 });
 
-app.post('/api/extract', async (req, res) => {
-  const { url } = req.body || {};
+// Extrae un artículo de cualquier URL soportada (blog/Substack o post/hilo de X)
+async function extractAny(url) {
   if (!url || !/^https?:\/\//i.test(url)) {
-    return res.status(400).json({ error: 'URL no válida (debe empezar por http:// o https://)' });
+    throw Object.assign(new Error('URL no válida (debe empezar por http:// o https://)'), { status: 400 });
   }
-
   // Posts e hilos de X van por otra vía: x.com no sirve HTML a servidores
   const statusId = parseXStatus(url);
-  if (statusId) {
-    try {
-      return res.json(await extractXThread(statusId, url));
-    } catch (e) {
-      return res.status(502).json({ error: e.message });
-    }
-  }
+  if (statusId) return extractXThread(statusId, url);
 
+  let r;
   try {
-    const r = await fetch(url, {
+    r = await fetch(url, {
       redirect: 'follow',
       signal: AbortSignal.timeout(25000),
       headers: {
-        'user-agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/126.0 Safari/537.36',
+        'user-agent': UA,
         'accept': 'text/html,application/xhtml+xml,*/*;q=0.8',
         'accept-language': 'es,en;q=0.8'
       }
     });
-    if (!r.ok) return res.status(502).json({ error: `El sitio respondió con error ${r.status}` });
-    const html = await r.text();
-    const article = extractArticle(html, r.url || url);
-    if (!article) return res.status(422).json({ error: 'No se pudo extraer el artículo de esa página' });
-    res.json(article);
   } catch (e) {
     const msg = e.name === 'TimeoutError' ? 'El sitio tardó demasiado en responder' : e.message;
-    res.status(500).json({ error: msg });
+    throw Object.assign(new Error(msg), { status: 502 });
+  }
+  if (!r.ok) throw Object.assign(new Error(`El sitio respondió con error ${r.status}`), { status: 502 });
+  const article = extractArticle(await r.text(), r.url || url);
+  if (!article) throw Object.assign(new Error('No se pudo extraer el artículo de esa página'), { status: 422 });
+  return article;
+}
+
+app.post('/api/extract', async (req, res) => {
+  try {
+    res.json(await extractAny((req.body || {}).url));
+  } catch (e) {
+    res.status(e.status || 500).json({ error: e.message });
+  }
+});
+
+// Bookmarklet: añade la URL al número actual y muestra una mini-confirmación
+app.get('/add', async (req, res) => {
+  const page = (title, body, autoClose) => `<!DOCTYPE html><html lang="es"><head><meta charset="utf-8">
+<title>${title}</title></head>
+<body style="font-family:'Segoe UI',Arial,sans-serif;background:#f2f1ee;padding:26px;color:#23211e">
+<h3 style="margin:0 0 8px">${title}</h3>
+<p style="color:#666;font-size:14px;line-height:1.4;margin:0 0 14px">${body}</p>
+<p style="font-size:13px"><a href="/" target="_blank" style="color:#b3402a">Abrir Quiosco</a>
+&nbsp;·&nbsp; <a href="#" onclick="window.close();return false" style="color:#666">Cerrar</a></p>
+${autoClose ? '<script>setTimeout(() => window.close(), 2500)</script>' : ''}
+</body></html>`;
+
+  try {
+    const article = await extractAny(req.query.url);
+    const mag = await loadMagazine();
+    mag.articles.push({ id: crypto.randomUUID(), included: true, ...article });
+    await saveMagazine(mag);
+    res.send(page('Añadido ✓',
+      `«${esc(article.title)}» — ${esc(mag.settings.issue || '')} (${mag.articles.length} artículos)`, true));
+  } catch (e) {
+    res.status(e.status || 500).send(page('No se pudo añadir', esc(e.message), false));
   }
 });
 
