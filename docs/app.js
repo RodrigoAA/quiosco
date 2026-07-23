@@ -225,6 +225,13 @@ function bindPreviewTools() {
 /* ---------- Quitar imágenes con clic (en la previsualización) ---------- */
 
 let imgEditOn = false;
+const undoStack = [];
+
+function pushUndo(article) {
+  undoStack.push({ id: article.id, content: article.content, leadImage: article.leadImage });
+  if (undoStack.length > 30) undoStack.shift();
+  $('#undoBtn').classList.remove('hidden');
+}
 
 function syncPreviewState() {
   try {
@@ -255,6 +262,7 @@ function initImageRemoval() {
     if (!article) return;
 
     if (d.quiosco === 'remove-image') {
+      pushUndo(article);
       if (d.isLead) {
         article.leadImage = '';
       } else {
@@ -269,11 +277,13 @@ function initImageRemoval() {
         } else if (article.leadImage === d.src) {
           article.leadImage = '';
         } else {
+          undoStack.pop();
+          if (!undoStack.length) $('#undoBtn').classList.add('hidden');
           status('No se encontró esa imagen en el artículo', true);
           return;
         }
       }
-      status(`Imagen quitada de «${article.title}» ✓`);
+      status(`Imagen quitada de «${article.title}» ✓ — ↩ Deshacer si no era esa`);
       scheduleSave();
       return;
     }
@@ -295,12 +305,26 @@ function initImageRemoval() {
     }
     doc.body.querySelectorAll('ul, ol').forEach(l => { if (!l.querySelector('li')) l.remove(); });
     if (removed) {
+      pushUndo(article);
       article.content = doc.body.innerHTML;
-      status(`${removed} bloque(s) de texto quitados de «${article.title}» ✓`);
+      status(`${removed} bloque(s) de texto quitados de «${article.title}» ✓ — ↩ Deshacer si no era eso`);
       scheduleSave();
     } else {
       status('No se encontró ese texto en el artículo', true);
     }
+  });
+
+  $('#undoBtn').addEventListener('click', () => {
+    const snap = undoStack.pop();
+    if (!snap) return;
+    const article = mag.articles.find(a => a.id === snap.id);
+    if (article) {
+      article.content = snap.content;
+      article.leadImage = snap.leadImage;
+      status(`Recorte deshecho en «${article.title}» ✓`);
+      scheduleSave();
+    }
+    if (!undoStack.length) $('#undoBtn').classList.add('hidden');
   });
 }
 
@@ -392,6 +416,16 @@ async function initPalette() {
   $('#paletteRow').classList.remove('hidden');
 }
 
+/* ---------- Vista completa (misma pestaña, sin panel lateral) ---------- */
+
+function bindFocusMode() {
+  const btn = $('#focusBtn');
+  btn.addEventListener('click', () => {
+    const on = document.body.classList.toggle('focus');
+    btn.textContent = on ? '✎ Volver al editor' : '⛶ Vista completa';
+  });
+}
+
 /* ---------- Imprimir la previsualización ---------- */
 
 function bindPrint() {
@@ -457,6 +491,7 @@ function init() {
   bindPreviewTools();
   bindJsonTools();
   bindPrint();
+  bindFocusMode();
   initImageRemoval();
   initPalette();
   status('Listo');

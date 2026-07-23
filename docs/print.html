@@ -32,8 +32,9 @@
       font-size: 13px;
       display: flex;
       align-items: center;
+      flex-wrap: wrap;
       gap: 12px;
-      max-width: 460px;
+      max-width: calc(100vw - 28px);
     }
     #tb-status { font-weight: 600; white-space: nowrap; }
     #tb-print {
@@ -87,7 +88,7 @@
   <div id="toolbar">
     <span id="tb-status">Maquetando…</span>
     <button id="tb-print" disabled
-      title="Desde Edge/Chrome: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado. Destino «Guardar como PDF» para el archivo">Imprimir / PDF</button>
+      title="Desde Edge/Chrome: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado. Destino «Guardar como PDF» para el archivo">Imprimir PDF</button>
   </div>
   <div id="pages"></div>
   <script src="print.js" type="module"></script>

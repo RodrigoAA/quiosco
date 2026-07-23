@@ -145,7 +145,6 @@ function initImageEditMode() {
     const article = img.closest('.article');
     if (!article) return;
     ev.preventDefault();
-    if (!confirm('¿Quitar esta imagen de la revista? (para recuperarla tendrías que volver a añadir el artículo)')) return;
     const artIndex = parseInt(article.dataset.art ?? (article.id || '').replace('art-', ''), 10);
     if (isNaN(artIndex)) return;
     window.parent.postMessage({
@@ -180,11 +179,6 @@ function initImageEditMode() {
     const blocks = candidates.filter(el => !candidates.some(o => o !== el && o.contains(el)));
     if (!blocks.length) return;
 
-    const preview = blocks[0].textContent.replace(/\s+/g, ' ').trim().slice(0, 60);
-    if (!confirm(`¿Quitar ${blocks.length} bloque(s) de texto que empiezan por «${preview}…»?`)) {
-      sel.removeAllRanges();
-      return;
-    }
     window.parent.postMessage({
       quiosco: 'remove-text',
       art: artIndex,

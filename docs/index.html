@@ -28,9 +28,10 @@
     <h1>Quiosco</h1>
     <span id="status" class="status"></span>
     <div class="actions">
-      <a class="btn" href="print.html" target="_blank">Vista de impresión ↗</a>
+      <button id="focusBtn" class="btn" type="button"
+        title="Oculta el panel lateral para revisar la revista a todo el ancho">⛶ Vista completa</button>
       <button id="printBtn" class="btn primary" type="button"
-        title="Imprime o guarda como PDF desde el navegador: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">Imprimir / PDF</button>
+        title="Imprime o guarda como PDF desde el navegador: escala 100 %, márgenes «Ninguno», «Gráficos de fondo» activado">Imprimir PDF</button>
     </div>
   </header>
 
@@ -134,7 +135,8 @@
         <button id="refresh" class="btn" type="button">Actualizar</button>
         <button id="imgEditBtn" class="btn" type="button"
           title="Modo edición: pulsa una imagen para quitarla, o selecciona texto para eliminar esos párrafos">✂ Recortar</button>
-        <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto para quitarlos · el modo sigue activo hasta que lo apagues</span>
+        <button id="undoBtn" class="btn hidden" type="button" title="Deshacer el último recorte">↩ Deshacer</button>
+        <span id="imgEditHint" class="hidden">pulsa una imagen o selecciona texto: se quitan al instante (↩ Deshacer si te pasas)</span>
       </div>
       <iframe id="preview" src="print.html" title="Previsualización de la revista"></iframe>
     </section>
