@@ -8,7 +8,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage', 'fillerImage', 'exportMode'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage', 'fillerImage', 'fillerMosaic', 'exportMode'];
 
 function status(msg, isError = false) {
   const el = $('#status');

@@ -41,11 +41,12 @@ abierto o cerrado.
    de portada — se recalcula al cambiarla — y cuentagotas 🎨), 10 tipografías
    empaquetadas, columnas 1–4,
    alineación, párrafos (sangría clásica o espaciado web), contraportada
-   (raya o página completa de color), acabado e **imagen de cierre**: una URL
-   (o un archivo en `data/images/`, servido en `/userimg/…`) que viste la
-   última página blanca del final — la cara interior de la contraportada —
-   en vez de dejarla vacía. Solo aparece si el cuadre a múltiplo de 4 deja
-   blancas.
+   (raya o página completa de color), acabado y las **páginas de cierre**:
+   una imagen a página (la última blanca del final — cara interior de la
+   contraportada) y/o una composición de 2–4 fotos en cuadrícula (otra
+   blanca). Valen URLs o archivos en `data/images/` (servidos en
+   `/userimg/…`). Solo aparecen si el cuadre a múltiplo de 4 deja blancas;
+   si solo queda una, la imagen a página tiene prioridad.
 4. **Por artículo** (✎): título, autor, entradilla, imagen destacada, columnas
    y alineación propias.
 5. **✂ Recortar** (en la previsualización): entra al modo y marca lo que sobra —

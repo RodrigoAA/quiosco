@@ -154,6 +154,20 @@ img { max-width: 100%; }
   object-fit: contain;
 }
 
+/* Composición de cierre: cuadrícula de 2–4 fotos en otra blanca */
+.filler-page.mosaico {
+  height: 250mm;
+  display: grid;
+  grid-template-columns: 1fr 1fr;
+  grid-auto-rows: 1fr;
+  gap: 4mm;
+}
+.filler-page.mosaico img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
 .backcover {
   page: contraportada;
   break-before: page;

@@ -24,7 +24,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage', 'fillerImage'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage', 'fillerImage', 'fillerMosaic'];
 
 function loadMag() {
   try {

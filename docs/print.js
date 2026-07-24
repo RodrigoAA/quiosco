@@ -463,13 +463,21 @@ async function main() {
       if (needed > 0) {
         status.textContent = 'Cuadrando pliegos…';
         pagesEl.innerHTML = '';
-        const cierre = s.fillerImage
-          ? `<section class="filler-page cierre"><img src="${esc(s.fillerImage)}" alt=""></section>`
-          : '<section class="filler-page"></section>';
+        // Las blancas «vestidas» van al final, pegadas a la contraportada;
+        // si no caben todas, la imagen de cierre tiene prioridad.
+        const vistas = [];
+        const mosaico = (s.fillerMosaic || '').split(/[\n,]+/).map(t => t.trim()).filter(Boolean);
+        if (mosaico.length >= 2) {
+          vistas.push(`<section class="filler-page mosaico">${mosaico.slice(0, 4).map(u => `<img src="${esc(u)}" alt="">`).join('')}</section>`);
+        }
+        if (s.fillerImage) {
+          vistas.push(`<section class="filler-page cierre"><img src="${esc(s.fillerImage)}" alt=""></section>`);
+        }
+        const shown = vistas.slice(-needed);
         const content2 = document.createElement('div');
         content2.innerHTML = cleanedHTML.replace(
           '<section class="backcover',
-          '<section class="filler-page"></section>'.repeat(needed - 1) + cierre + '<section class="backcover'
+          '<section class="filler-page"></section>'.repeat(needed - shown.length) + shown.join('') + '<section class="backcover'
         );
         result = await new Previewer().preview(content2, ['magazine.css'], pagesEl);
       }
