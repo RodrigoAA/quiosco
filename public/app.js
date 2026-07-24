@@ -8,7 +8,7 @@ const esc = s => String(s ?? '')
   .replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;')
   .replace(/"/g, '&quot;');
 
-const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage'];
+const SETTING_FIELDS = ['title', 'subtitle', 'issue', 'date', 'accent', 'font', 'columns', 'align', 'paragraphs', 'finish', 'backstyle', 'coverImage', 'fillerImage', 'exportMode'];
 
 function status(msg, isError = false) {
   const el = $('#status');
@@ -887,16 +887,25 @@ function bindExport() {
   const btn = $('#exportBtn');
   btn.addEventListener('click', async () => {
     btn.disabled = true;
-    status('Generando PDF (puede tardar un poco si hay muchas imágenes)…');
+    const dos = mag.settings.exportMode === 'dos';
+    status(`Generando ${dos ? 'cubierta e interior' : 'PDF'} (puede tardar un poco si hay muchas imágenes)…`);
     try {
-      const r = await fetch('/api/export-pdf', { method: 'POST' });
+      const r = await fetch('/api/export-pdf', {
+        method: 'POST',
+        headers: { 'content-type': 'application/json' },
+        body: JSON.stringify({ mode: dos ? 'dos' : 'uno' })
+      });
       const data = await r.json();
       if (!r.ok) throw new Error(data.error || 'Error desconocido');
-      const a = document.createElement('a');
-      a.href = data.url;
-      a.download = data.name;
-      a.click(); // descarga automática al terminar
-      status(`PDF descargado (${data.kb} KB) — copia maestra en quiosco\\exports`);
+      for (const f of data.files || [data]) {
+        const a = document.createElement('a');
+        a.href = f.url;
+        a.download = f.name;
+        a.click(); // descarga automática al terminar
+        await new Promise(res => setTimeout(res, 600)); // que el navegador no pise una descarga con otra
+      }
+      const total = (data.files || [data]).reduce((n, f) => n + f.kb, 0);
+      status(`${(data.files || [data]).length > 1 ? 'PDFs descargados' : 'PDF descargado'} (${total} KB) — copia maestra en quiosco\\exports`);
     } catch (e) {
       status('Error al generar el PDF: ' + e.message, true);
     } finally {

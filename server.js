@@ -5,7 +5,7 @@ import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { JSDOM, VirtualConsole } from 'jsdom';
 import { Readability } from '@mozilla/readability';
-import { exportPDF, fetchPageHTML } from './exporter.js';
+import { exportPDF, exportPDFJobs, fetchPageHTML } from './exporter.js';
 
 const __dirname = path.dirname(fileURLToPath(import.meta.url));
 const DATA_DIR = path.join(__dirname, 'data');
@@ -17,6 +17,8 @@ app.use(express.json({ limit: '25mb' }));
 app.use(express.static(path.join(__dirname, 'public')));
 app.use('/vendor', express.static(path.join(__dirname, 'node_modules', 'pagedjs', 'dist')));
 app.use('/exports', express.static(path.join(__dirname, 'exports')));
+// Imágenes propias (portadas, páginas de cierre…): suéltalas en data/images
+app.use('/userimg', express.static(path.join(__dirname, 'data', 'images')));
 // Copia de desarrollo de la versión web estática (la que vive en GitHub Pages)
 app.use('/web', express.static(path.join(__dirname, 'docs')));
 
@@ -353,20 +355,49 @@ function extractArticle(html, url) {
   };
 }
 
-app.post('/api/export-pdf', async (_req, res) => {
+app.post('/api/export-pdf', async (req, res) => {
   try {
     const mag = await loadMagazine();
     const safe = s => (s || '').replace(/[\\/:*?"<>|]/g, '').replace(/\s+/g, ' ').trim();
-    const name = `${safe(mag.settings.title) || 'Revista'} — ${safe(mag.settings.issue) || 'sin número'}.pdf`;
+    const base = `${safe(mag.settings.title) || 'Revista'} — ${safe(mag.settings.issue) || 'sin número'}`;
     const dir = path.join(__dirname, 'exports');
     await fs.mkdir(dir, { recursive: true });
-    const file = path.join(dir, name);
+    const url = `http://localhost:${PORT}/print.html`;
 
-    await exportPDF(`http://localhost:${PORT}/print.html`, file);
+    // mode 'dos': cubierta (pliego exterior, para papel de más gramaje) e
+    // interior por separado, del mismo render. La cubierta se lleva las 4
+    // caras de su hoja: portada, su reverso, y las dos últimas páginas.
+    const mode = (req.body || {}).mode === 'dos' ? 'dos' : 'uno';
+    let outputs;
+    if (mode === 'dos') {
+      if ((mag.settings.finish || 'caballete') !== 'caballete') {
+        throw new Error('La cubierta separada solo tiene sentido con acabado en caballete');
+      }
+      outputs = [
+        { name: `${base} (cubierta).pdf` },
+        { name: `${base} (interior).pdf` }
+      ];
+      await exportPDFJobs(url, total => {
+        if (total < 8 || total % 4 !== 0) {
+          throw new Error(`La revista tiene ${total} páginas; para separar cubierta necesita al menos 8 y múltiplo de 4`);
+        }
+        outputs[0].pageRanges = `1-2,${total - 1}-${total}`;
+        outputs[1].pageRanges = `3-${total - 2}`;
+        return outputs.map(o => ({ file: path.join(dir, o.name), pageRanges: o.pageRanges }));
+      });
+    } else {
+      outputs = [{ name: `${base}.pdf` }];
+      await exportPDF(url, path.join(dir, outputs[0].name));
+    }
 
-    const size = (await fs.stat(file)).size;
-    if (size < 1000) throw new Error('El PDF salió vacío; revisa la vista de impresión');
-    res.json({ ok: true, name, url: '/exports/' + encodeURIComponent(name), path: file, kb: Math.round(size / 1024) });
+    const files = [];
+    for (const o of outputs) {
+      const size = (await fs.stat(path.join(dir, o.name))).size;
+      if (size < 1000) throw new Error(`«${o.name}» salió vacío; revisa la vista de impresión`);
+      files.push({ name: o.name, url: '/exports/' + encodeURIComponent(o.name), kb: Math.round(size / 1024) });
+    }
+    // name/url/kb sueltos: compatibilidad con el flujo de un solo PDF
+    res.json({ ok: true, files, name: files[0].name, url: files[0].url, kb: files[0].kb });
   } catch (e) {
     res.status(500).json({ error: e.message });
   }

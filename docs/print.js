@@ -455,16 +455,21 @@ async function main() {
     const { Previewer } = await import('./vendor/paged.esm.js');
     let result = await new Previewer().preview(content, ['magazine.css'], pagesEl);
 
-    // Segunda pasada: blancas antes de la contraportada hasta múltiplo de 4
+    // Segunda pasada: blancas antes de la contraportada hasta múltiplo de 4.
+    // Si hay imagen de cierre, viste la última blanca (la cara interior
+    // de la contraportada) en vez de dejarla vacía.
     if (saddle) {
       const needed = (4 - (result.total % 4)) % 4;
       if (needed > 0) {
         status.textContent = 'Cuadrando pliegos…';
         pagesEl.innerHTML = '';
+        const cierre = s.fillerImage
+          ? `<section class="filler-page cierre"><img src="${esc(s.fillerImage)}" alt=""></section>`
+          : '<section class="filler-page"></section>';
         const content2 = document.createElement('div');
         content2.innerHTML = cleanedHTML.replace(
           '<section class="backcover',
-          '<section class="filler-page"></section>'.repeat(needed) + '<section class="backcover'
+          '<section class="filler-page"></section>'.repeat(needed - 1) + cierre + '<section class="backcover'
         );
         result = await new Previewer().preview(content2, ['magazine.css'], pagesEl);
       }

@@ -41,7 +41,11 @@ abierto o cerrado.
    de portada — se recalcula al cambiarla — y cuentagotas 🎨), 10 tipografías
    empaquetadas, columnas 1–4,
    alineación, párrafos (sangría clásica o espaciado web), contraportada
-   (raya o página completa de color) y acabado.
+   (raya o página completa de color), acabado e **imagen de cierre**: una URL
+   (o un archivo en `data/images/`, servido en `/userimg/…`) que viste la
+   última página blanca del final — la cara interior de la contraportada —
+   en vez de dejarla vacía. Solo aparece si el cuadre a múltiplo de 4 deja
+   blancas.
 4. **Por artículo** (✎): título, autor, entradilla, imagen destacada, columnas
    y alineación propias.
 5. **✂ Recortar** (en la previsualización): entra al modo y marca lo que sobra —
@@ -51,9 +55,11 @@ abierto o cerrado.
 6. **⛶ Vista completa**: solo la revista y la toolbar flotante (Esc para volver).
 7. **⬇ Descargar PDF**: genera la revista con Edge headless en el servidor
    (espera a la maqueta y a las imágenes, transferencia por streaming) y la
-   descarga; copia maestra en `exports/`. **🖨 Imprimir PDF** abre el diálogo
-   del navegador, solo para impresora física (escala 100 %, márgenes «Ninguno»,
-   «Gráficos de fondo» activado).
+   descarga; copia maestra en `exports/`. Con «Descarga del PDF: cubierta +
+   interior» (panel Diseño) bajan **dos PDFs del mismo render** para imprimir
+   la cubierta en papel de más gramaje (ver abajo). **🖨 Imprimir PDF** abre el
+   diálogo del navegador, solo para impresora física (escala 100 %, márgenes
+   «Ninguno», «Gráficos de fondo» activado).
 
 ### Añadir con un clic: extensión de navegador
 
@@ -112,6 +118,17 @@ de 4 (blancas automáticas antes de la contraportada), así que no hay que pedir
 nada especial. Nada llega al borde del papel salvo la contraportada en modo
 «área» (sin sangre: puede quedar un filo blanco según la máquina). Consejo:
 imprime una copia de prueba antes de encargar la tirada.
+
+### Cubierta en papel de más gramaje
+
+Si quieres cubierta en cartulina (p. ej. 250 g) e interior en papel normal
+(90–135 g), pon «Descarga del PDF: cubierta + interior» en el panel Diseño.
+Del mismo render salen dos archivos: **cubierta** (las 4 caras de su hoja:
+portada, su reverso —donde cae el índice—, la página de cierre y la
+contraportada) e **interior** (el resto, que sigue siendo múltiplo de 4).
+Pedido tipo: «revista A4 grapada a caballete, cubierta a color en 250 g,
+interior a color en 115 g, cada parte en su PDF». Requiere acabado en
+caballete y al menos 8 páginas.
 
 ### Prueba de tipografías en papel
 

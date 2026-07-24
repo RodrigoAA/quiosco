@@ -90,6 +90,12 @@ async function withBrowserPage(fn) {
 }
 
 export function exportPDF(url, outFile) {
+  return exportPDFJobs(url, () => [{ file: outFile }]);
+}
+
+// Maqueta una vez e imprime uno o varios PDFs. jobsFor(totalPáginas) devuelve
+// [{ file, pageRanges? }] — así la cubierta y el interior salen del mismo render.
+export function exportPDFJobs(url, jobsFor) {
   return withBrowserPage(async ({ send }) => {
     await send('Page.navigate', { url });
 
@@ -97,11 +103,13 @@ export function exportPDF(url, outFile) {
     // (si alguna imagen se atasca, seguimos igualmente pasado un margen)
     const deadline = Date.now() + 180000;
     let doneAt = 0;
+    let total = 0;
     for (;;) {
       const { result } = await send('Runtime.evaluate', {
         expression: `JSON.stringify({
           href: location.href,
           status: window.__pagedStatus ? window.__pagedStatus.done : null,
+          pages: window.__pagedStatus ? window.__pagedStatus.pages : 0,
           imgsPending: Array.from(document.images).filter(i => !i.complete).length
         })`,
         returnByValue: true
@@ -110,7 +118,7 @@ export function exportPDF(url, outFile) {
       if (st.status === 'error') throw new Error('Paged.js falló al maquetar la revista');
       if (st.status === true) {
         if (!doneAt) doneAt = Date.now();
-        if (st.imgsPending === 0 || Date.now() - doneAt > 60000) break;
+        if (st.imgsPending === 0 || Date.now() - doneAt > 60000) { total = st.pages || 0; break; }
       }
       if (Date.now() > deadline) {
         throw new Error(`La maquetación no terminó a tiempo (página: ${st.href}, estado: ${st.status}, imágenes pendientes: ${st.imgsPending})`);
@@ -119,21 +127,24 @@ export function exportPDF(url, outFile) {
     }
     await new Promise(r => setTimeout(r, 800));
 
-    // El PDF se pide como stream y se lee por trozos: entero en un solo
-    // mensaje revienta el WebSocket con documentos grandes (visto con 50 págs).
-    const pdf = await send('Page.printToPDF', {
-      printBackground: true,
-      preferCSSPageSize: true,
-      transferMode: 'ReturnAsStream'
-    }, 120000);
-    const chunks = [];
-    for (;;) {
-      const c = await send('IO.read', { handle: pdf.stream, size: 1 << 20 });
-      chunks.push(Buffer.from(c.data, c.base64Encoded ? 'base64' : 'utf8'));
-      if (c.eof) break;
+    for (const job of jobsFor(total)) {
+      // El PDF se pide como stream y se lee por trozos: entero en un solo
+      // mensaje revienta el WebSocket con documentos grandes (visto con 50 págs).
+      const pdf = await send('Page.printToPDF', {
+        printBackground: true,
+        preferCSSPageSize: true,
+        ...(job.pageRanges ? { pageRanges: job.pageRanges } : {}),
+        transferMode: 'ReturnAsStream'
+      }, 120000);
+      const chunks = [];
+      for (;;) {
+        const c = await send('IO.read', { handle: pdf.stream, size: 1 << 20 });
+        chunks.push(Buffer.from(c.data, c.base64Encoded ? 'base64' : 'utf8'));
+        if (c.eof) break;
+      }
+      await send('IO.close', { handle: pdf.stream });
+      await fs.writeFile(job.file, Buffer.concat(chunks));
     }
-    await send('IO.close', { handle: pdf.stream });
-    await fs.writeFile(outFile, Buffer.concat(chunks));
   });
 }
 
